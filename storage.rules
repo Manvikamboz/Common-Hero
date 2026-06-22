@@ -1,0 +1,41 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper: Check if file size is below 10MB
+    function isValidSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Helper: Check if content type is image (WebP, PNG, JPEG)
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Citizen reports: images only, max 10MB, authenticated upload
+    match /issues/{allPaths} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidSize() && isImage();
+    }
+
+    // Authority proofs: images only, max 10MB, authenticated authorities
+    match /resolutions/{allPaths} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidSize() && isImage() && (
+        request.auth.token.role == 'authority' || 
+        request.auth.token.role == 'admin'
+      );
+    }
+    
+    // User avatars
+    match /avatars/{userId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId && isValidSize() && isImage();
+    }
+  }
+}

@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Check if the user is the owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper: Check if the user has an authority or admin role
+    function isAuthorityOrAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'authority' || 
+        request.auth.token.role == 'admin'
+      );
+    }
+
+    // Helper: Check if the user is admin
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+
+    // Issues Collection
+    match /issues/{issueId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.reportedBy == request.auth.uid || 
+        isAuthorityOrAdmin()
+      );
+      allow delete: if isAdmin();
+
+      // Nested validations/comments under issues
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Authorities Collection / Reference Data
+    match /authorities/{authorityId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}
