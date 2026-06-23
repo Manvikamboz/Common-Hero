@@ -13,12 +13,12 @@ const nextConfig = {
   async headers() {
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.googleapis.com https://apis.google.com;
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.googleapis.com https://apis.google.com https://www.google.com https://www.gstatic.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       img-src 'self' blob: data: https://maps.gstatic.com https://maps.googleapis.com https://firebasestorage.googleapis.com https://*.googleapis.com https://*.googleusercontent.com;
       font-src 'self' https://fonts.gstatic.com data:;
-      connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://maps.googleapis.com;
-      frame-src 'self' https://*.firebaseapp.com;
+      connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://maps.googleapis.com https://www.google.com;
+      frame-src 'self' https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com;
       object-src 'none';
       base-uri 'self';
       form-action 'self';

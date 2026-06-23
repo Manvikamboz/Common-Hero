@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@google/genai": "^2.9.0",
     "@google/generative-ai": "^0.24.1",
     "@googlemaps/js-api-loader": "^2.1.1",
     "@googlemaps/markerclusterer": "^2.6.2",
@@ -37,6 +38,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@vitejs/plugin-react": "^5.0.1",
+    "autoprefixer": "^10.5.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "jsdom": "^29.1.1",
