@@ -25,7 +25,67 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const signInWithDemo = useCallback((role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen') => {
+    const demoProfiles: Record<string, User> = {
+      citizen: MOCK_USER,
+      validator: {
+        id: 'demo_user_002',
+        name: 'Jane Smith (Validator)',
+        email: 'jane@commonhero.app',
+        role: 'validator',
+        points: 450,
+        issuesReported: 2,
+        issuesValidated: 35,
+        badges: [],
+        wardId: 'ward_12',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      authority: {
+        id: 'demo_user_003',
+        name: 'Officer John Doe',
+        email: 'john.doe@municipal.gov',
+        role: 'authority',
+        points: 0,
+        issuesReported: 0,
+        issuesValidated: 0,
+        badges: [],
+        wardId: 'ward_12',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      admin: {
+        id: 'demo_user_004',
+        name: 'System Admin',
+        email: 'admin@commonhero.app',
+        role: 'admin',
+        points: 0,
+        issuesReported: 0,
+        issuesValidated: 0,
+        badges: [],
+        wardId: 'ward_12',
+        createdAt: '2026-01-01T00:00:00Z',
+      }
+    };
+    
+    const selectedUser = demoProfiles[role] || MOCK_USER;
+    localStorage.setItem('demo_user_override', JSON.stringify(selectedUser));
+    setUser(selectedUser);
+  }, []);
+
   useEffect(() => {
+    // Check if there is a demo user override in localStorage
+    if (typeof window !== 'undefined') {
+      const savedDemoUser = localStorage.getItem('demo_user_override');
+      if (savedDemoUser) {
+        try {
+          setUser(JSON.parse(savedDemoUser));
+          setLoading(false);
+          return;
+        } catch (e) {
+          localStorage.removeItem('demo_user_override');
+        }
+      }
+    }
+
     // Use mock user for demo — in production, use onAuthStateChanged
     const isDemoMode = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 
       process.env.NEXT_PUBLIC_FIREBASE_API_KEY === 'mock-api-key';
@@ -70,9 +130,12 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('demo_user_override');
+    }
     await signOut(auth);
     setUser(null);
   }, []);
 
-  return { user, loading, signInWithGoogle, logout };
+  return { user, loading, signInWithGoogle, signInWithDemo, logout };
 }

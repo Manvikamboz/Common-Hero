@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Camera, 
   MapPin, 
@@ -10,12 +11,16 @@ import {
   ShieldAlert, 
   BarChart3, 
   Home,
-  UserCheck
+  LogIn,
+  LogOut,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { name: 'Home', href: '/', icon: Home },
@@ -25,6 +30,20 @@ export default function Navigation() {
     { name: 'Authority', href: '/dashboard', icon: ShieldAlert },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   ];
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <>
@@ -61,15 +80,44 @@ export default function Navigation() {
           })}
         </div>
 
-        {/* Profile Mock */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-xs text-gray-500 font-medium">Rank #12 in Ward 12</p>
-            <p className="text-xs font-semibold text-amber-400">★ 240 pts</p>
-          </div>
-          <div className="w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center font-bold text-sm text-white shadow-md border border-white/10">
-            MK
-          </div>
+        {/* Profile / Authentication Controls */}
+        <div className="flex items-center gap-4">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xs text-white font-semibold max-w-[120px] truncate">{user.name}</p>
+                <p className="text-[10px] text-amber-400 font-medium">★ {user.points} pts</p>
+              </div>
+              
+              {user.photoUrl ? (
+                <img
+                  src={user.photoUrl}
+                  alt={user.name}
+                  className="w-9 h-9 rounded-full border border-white/10 shadow-md object-cover"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center font-bold text-sm text-white shadow-md border border-white/10">
+                  {getUserInitials(user.name)}
+                </div>
+              )}
+
+              <button
+                onClick={handleLogout}
+                className="p-1.5 rounded-lg text-gray-500 hover:text-rose-400 hover:bg-rose-500/5 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-2 px-4 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              Sign In
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -94,6 +142,17 @@ export default function Navigation() {
             </Link>
           );
         })}
+        
+        {/* Mobile Profile Link */}
+        <Link
+          href={user ? "#" : "/login"}
+          onClick={user ? handleLogout : undefined}
+          className="flex flex-col items-center justify-center w-12 h-12 rounded-xl text-gray-500 hover:text-gray-300 transition-colors"
+          title={user ? "Sign Out" : "Sign In"}
+        >
+          {user ? <LogOut className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+          <span className="text-[10px] mt-1 font-medium tracking-tight">{user ? 'Logout' : 'Login'}</span>
+        </Link>
       </nav>
     </>
   );
