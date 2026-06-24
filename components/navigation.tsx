@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -90,9 +91,11 @@ export default function Navigation() {
               </div>
               
               {user.photoUrl ? (
-                <img
+                <Image
                   src={user.photoUrl}
                   alt={user.name}
+                  width={36}
+                  height={36}
                   className="w-9 h-9 rounded-full border border-white/10 shadow-md object-cover"
                 />
               ) : (
