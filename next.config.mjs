@@ -10,15 +10,27 @@ const nextConfig = {
   experimental: {
     esmExternals: 'loose',
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      },
+    ],
+  },
   async headers() {
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.googleapis.com https://apis.google.com https://www.google.com https://www.gstatic.com;
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.googleapis.com https://apis.google.com https://www.google.com https://www.gstatic.com https://*.recaptcha.net https://recaptcha.net;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       img-src 'self' blob: data: https://maps.gstatic.com https://maps.googleapis.com https://firebasestorage.googleapis.com https://*.googleapis.com https://*.googleusercontent.com;
       font-src 'self' https://fonts.gstatic.com data:;
-      connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://maps.googleapis.com https://www.google.com;
-      frame-src 'self' https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com;
+      connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://maps.googleapis.com https://www.google.com https://*.recaptcha.net https://recaptcha.net;
+      frame-src 'self' https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://*.recaptcha.net https://recaptcha.net;
       object-src 'none';
       base-uri 'self';
       form-action 'self';

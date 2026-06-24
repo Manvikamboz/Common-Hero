@@ -27,6 +27,13 @@ export default function LoginPage() {
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
+  // Set App Check debug token on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = "Ae0iMNeGrb9MV0oyVzrIURiS37ObNTlRc3zHfRR06NreVC6Omks9MAQNjRkZk6C9uhKmwYulwiIKeOlamzJL6B7EO_9ByovNm4UiiVh5-q9NyKV_8O1pQxH7sJ-yJYBHNzLcu97JBdCTG-tWz4ktRTnxVQ";
+    }
+  }, []);
+
   // Redirect to home if already logged in
   useEffect(() => {
     if (!authLoading && user) {

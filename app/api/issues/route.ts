@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Image Sanitization & Validation (Magic Bytes & EXIF metadata stripping)
-    let mediaUrls: string[] = [];
+    const mediaUrls: string[] = [];
     let imageBuffer: Buffer | null = null;
     let imageMime = 'image/jpeg';
 
