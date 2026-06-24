@@ -21,7 +21,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export default function MapPage() {
-  const { user } = useAuth();
+  const { user, getAuthToken } = useAuth();
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
@@ -137,7 +137,7 @@ export default function MapPage() {
         data: points,
         map: googleMapRef.current,
         radius: 30,
-        gradient: ['transparent', '#7c3aed', '#a855f7', '#ec4899', '#ef4444'],
+        gradient: ['transparent', '#16a34a', '#86efac', '#eab308', '#ef4444'],
       });
     } else if (heatmapRef.current) {
       heatmapRef.current.setMap(null);
@@ -148,9 +148,13 @@ export default function MapPage() {
     if (!user) return;
     setValidationLoading(issueId);
     try {
+      const token = await getAuthToken();
       const res = await fetch(`/api/issues/${issueId}/validate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ userId: user.id, userRole: user.role, status: 'valid', comments: 'Upvoted from map view' }),
       });
       if (!res.ok) {
@@ -281,8 +285,8 @@ export default function MapPage() {
               <div ref={mapRef} className="w-full h-full" />
             ) : (
               /* Demo Map Fallback */
-              <div className="w-full h-full bg-[#1a1a2e] flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(139,92,246,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.3)_1px,transparent_1px)] bg-[size:40px_40px]" />
+              <div className="w-full h-full bg-zinc-950 flex flex-col items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(34,197,94,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.3)_1px,transparent_1px)] bg-[size:40px_40px]" />
                 {/* Mock Issue Pins */}
                 {issues.map((issue, i) => {
                   const positions = [

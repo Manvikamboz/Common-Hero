@@ -34,7 +34,7 @@ export async function categorizeIssue(
   }
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-pro',
+    model: 'gemini-2.5-pro',
     systemInstruction:
       'You are an expert municipal AI. Analyze the provided civic-issue image and citizen description. Classify it into the correct category, assess severity, and generate a concise action brief for repair crews. Return strict JSON.',
   });
@@ -97,7 +97,7 @@ export async function detectDuplicate(
     return { isDuplicate: false, matchedIssueId: null, confidence: 0 };
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const nearbyList = nearbyIssues
     .slice(0, 5)
@@ -155,7 +155,7 @@ Respond with JSON:
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
   const result = await model.embedContent(text);
   if (result.embedding?.values) return result.embedding.values;
   throw new Error('Embedding failed');
@@ -169,7 +169,7 @@ export async function generateAutoSummary(description: string, address: string):
     return `Action Brief: Resolve the reported civic issue. Location Detail: ${address}`;
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   const result = await model.generateContent(
     `You are a municipal dispatch AI. Summarize this citizen report into a 2-sentence action brief for a field repair crew. Be specific about what needs to be done and where.
 
@@ -193,7 +193,7 @@ export async function analyzeSentiment(comments: string[]): Promise<{
     return { frustrationIndex: 3, flaggedComments: [] };
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   const commentList = comments.map((c, i) => `[${i}]: "${c}"`).join('\n');
 
   const result = await model.generateContent({
@@ -247,7 +247,7 @@ export async function generatePredictiveInsights(recentIssuesJson: string): Prom
   if (!apiKey) return { predictions: [] };
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-pro',
+    model: 'gemini-2.5-pro',
     systemInstruction:
       'You are a senior urban planning AI analyst. Examine 90 days of civic issues data. Identify emerging clusters, predict categories likely to surge in next 14 days, and recommend concrete preventative maintenance steps.',
   });
@@ -303,7 +303,7 @@ export async function analyzeCommentSentiment(commentText: string) {
     return { toxicity: false, frustrationIndex: 5, dominantEmotion: 'neutral' };
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const result = await model.generateContent({
     contents: [

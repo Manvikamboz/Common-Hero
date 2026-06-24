@@ -53,3 +53,18 @@ export async function getAdminServices() {
     adminStorage: adminStorageInstance 
   };
 }
+
+export async function uploadToStorage(buffer: Buffer, mimeType: string, path: string): Promise<string> {
+  const { adminStorage } = await getAdminServices();
+  const bucket = adminStorage.bucket();
+  const file = bucket.file(path);
+  
+  await file.save(buffer, {
+    metadata: {
+      contentType: mimeType,
+    },
+    resumable: false,
+  });
+  
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media`;
+}

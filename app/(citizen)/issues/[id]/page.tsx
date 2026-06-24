@@ -54,7 +54,7 @@ const DEMO_ISSUE: Issue = {
 };
 
 export default function IssueDetailPage({ params }: { params: { id: string } }) {
-  const { user } = useAuth();
+  const { user, getAuthToken } = useAuth();
   const issueId = params.id;
 
   const [issue, setIssue] = useState<Issue | null>(null);
@@ -73,9 +73,13 @@ export default function IssueDetailPage({ params }: { params: { id: string } }) 
     if (!disputeRemarks.trim() || !user) return;
     setDisputeLoading(true);
     try {
+      const token = await getAuthToken();
       const res = await fetch(`/api/issues/${issueId}/dispute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ remarks: disputeRemarks.trim() }),
       });
       const data = await res.json();
@@ -130,9 +134,13 @@ export default function IssueDetailPage({ params }: { params: { id: string } }) 
     if (!user) return;
     setValidationLoading(true);
     try {
+      const token = await getAuthToken();
       const res = await fetch(`/api/issues/${issueId}/validate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ userId: user.id, userRole: user.role, status: 'valid', comments: 'Verified from detail view' }),
       });
       if (!res.ok) {

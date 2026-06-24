@@ -46,6 +46,9 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin && !url.hostname.includes('maps.googleapis.com') && !url.hostname.includes('gstatic.com')) return;
 
+  // Skip Next.js internal / dev assets & HMR scripts
+  if (url.pathname.startsWith('/_next/') || url.pathname.includes('webpack-hmr')) return;
+
   // Google Maps tiles — stale-while-revalidate
   if (url.hostname.includes('maps.googleapis.com') || url.hostname.includes('maps.gstatic.com')) {
     event.respondWith(

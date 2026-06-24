@@ -3,114 +3,56 @@
 import { useState, useEffect, useCallback } from 'react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/types';
-
-const MOCK_USER: User = {
-  id: 'demo_user_001',
-  name: 'Manvi Kamboj',
-  email: 'manvi@commonhero.app',
-  role: 'citizen',
-  points: 240,
-  issuesReported: 8,
-  issuesValidated: 18,
-  badges: [
-    { id: 'first_report', name: 'First Reporter', description: 'Submitted first validated report', awardedAt: '2026-01-15T08:00:00Z' },
-    { id: 'neighborhood_watch', name: 'Neighborhood Watch', description: '10 validated reports', awardedAt: '2026-03-20T08:00:00Z' },
-  ],
-  wardId: 'ward_12',
-  createdAt: '2026-01-01T00:00:00Z',
-};
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const signInWithDemo = useCallback((role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen') => {
-    const demoProfiles: Record<string, User> = {
-      citizen: MOCK_USER,
-      validator: {
-        id: 'demo_user_002',
-        name: 'Jane Smith (Validator)',
-        email: 'jane@commonhero.app',
-        role: 'validator',
-        points: 450,
-        issuesReported: 2,
-        issuesValidated: 35,
-        badges: [],
-        wardId: 'ward_12',
-        createdAt: '2026-01-01T00:00:00Z',
-      },
-      authority: {
-        id: 'demo_user_003',
-        name: 'Officer John Doe',
-        email: 'john.doe@municipal.gov',
-        role: 'authority',
-        points: 0,
-        issuesReported: 0,
-        issuesValidated: 0,
-        badges: [],
-        wardId: 'ward_12',
-        createdAt: '2026-01-01T00:00:00Z',
-      },
-      admin: {
-        id: 'demo_user_004',
-        name: 'System Admin',
-        email: 'admin@commonhero.app',
-        role: 'admin',
-        points: 0,
-        issuesReported: 0,
-        issuesValidated: 0,
-        badges: [],
-        wardId: 'ward_12',
-        createdAt: '2026-01-01T00:00:00Z',
-      }
-    };
-    
-    const selectedUser = demoProfiles[role] || MOCK_USER;
-    localStorage.setItem('demo_user_override', JSON.stringify(selectedUser));
-    setUser(selectedUser);
-  }, []);
-
   useEffect(() => {
-    // Check if there is a demo user override in localStorage
-    if (typeof window !== 'undefined') {
-      const savedDemoUser = localStorage.getItem('demo_user_override');
-      if (savedDemoUser) {
-        try {
-          setUser(JSON.parse(savedDemoUser));
-          setLoading(false);
-          return;
-        } catch (e) {
-          localStorage.removeItem('demo_user_override');
-        }
-      }
-    }
-
-    // Use mock user for demo — in production, use onAuthStateChanged
-    const isDemoMode = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY === 'mock-api-key';
-
-    if (isDemoMode) {
-      setUser(MOCK_USER);
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // In production, fetch full user profile from Firestore
-        setUser({
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || 'Anonymous',
-          email: firebaseUser.email || '',
-          photoUrl: firebaseUser.photoURL || undefined,
-          role: 'citizen',
-          points: 0,
-          issuesReported: 0,
-          issuesValidated: 0,
-          badges: [],
-          createdAt: new Date().toISOString(),
-        });
+        try {
+          // Try to fetch full user profile from Firestore
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+
+          if (userSnap.exists()) {
+            setUser({ id: userSnap.id, ...userSnap.data() } as User);
+          } else {
+            // First-time sign in: create profile in Firestore
+            const newUser: User = {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'Anonymous',
+              email: firebaseUser.email || '',
+              photoUrl: firebaseUser.photoURL || undefined,
+              role: 'citizen',
+              points: 0,
+              issuesReported: 0,
+              issuesValidated: 0,
+              badges: [],
+              createdAt: new Date().toISOString(),
+            };
+            await setDoc(userRef, newUser);
+            setUser(newUser);
+          }
+        } catch {
+          // Fallback to basic Firebase auth info if Firestore fetch fails
+          setUser({
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Anonymous',
+            email: firebaseUser.email || '',
+            photoUrl: firebaseUser.photoURL || undefined,
+            role: 'citizen',
+            points: 0,
+            issuesReported: 0,
+            issuesValidated: 0,
+            badges: [],
+            createdAt: new Date().toISOString(),
+          });
+        }
       } else {
         setUser(null);
       }
@@ -130,12 +72,17 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('demo_user_override');
-    }
     await signOut(auth);
     setUser(null);
   }, []);
 
-  return { user, loading, signInWithGoogle, signInWithDemo, logout };
+  const getAuthToken = useCallback(async () => {
+    try {
+      return (await auth.currentUser?.getIdToken()) || '';
+    } catch {
+      return '';
+    }
+  }, []);
+
+  return { user, loading, signInWithGoogle, logout, getAuthToken };
 }

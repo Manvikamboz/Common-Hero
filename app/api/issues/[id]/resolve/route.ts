@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminServices } from '@/lib/firebase-admin';
+import { getAdminServices, uploadToStorage } from '@/lib/firebase-admin';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { ResolveIssueSchema } from '@/lib/validation';
 import { hardenUploadedFile } from '@/lib/media-harden';
@@ -58,8 +58,9 @@ export async function POST(
         );
       }
 
-      // Mock Upload: in production save to Firebase Storage
-      resolutionProofUrl = `https://firebasestorage.googleapis.com/v0/b/mock-bucket/o/resolutions%2F${Date.now()}_proof.webp`;
+      // Upload to actual Firebase Storage using admin SDK
+      const filename = `resolutions/${Date.now()}_proof.webp`;
+      resolutionProofUrl = await uploadToStorage(fileHardenResult.hardenedBuffer, fileHardenResult.mimeType, filename);
     }
 
     const issueRef = adminDb.collection('issues').doc(issueId);

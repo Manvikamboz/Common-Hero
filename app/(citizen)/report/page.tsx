@@ -14,7 +14,7 @@ const STEP_LABELS = ['Media', 'Location', 'Details', 'Confirm'];
 
 export default function ReportPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, getAuthToken } = useAuth();
   const { location, error: locError, loading: locLoading, requestLocation } = useLocation();
 
   const [step, setStep] = useState(0);
@@ -28,6 +28,7 @@ export default function ReportPage() {
   // Step 2 — Location
   const [address, setAddress] = useState('');
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -47,11 +48,16 @@ export default function ReportPage() {
 
   // Auto-fill location from GPS
   useEffect(() => {
-    if (location && !mapPosition) {
-      setMapPosition({ lat: location.latitude, lng: location.longitude });
+    if (location) {
+      const newPos = { lat: location.latitude, lng: location.longitude };
+      setMapPosition(newPos);
       setAddress(`Near ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+      if (mapInstanceRef.current && markerRef.current) {
+        mapInstanceRef.current.setCenter(newPos);
+        markerRef.current.setPosition(newPos);
+      }
     }
-  }, [location, mapPosition]);
+  }, [location]);
 
   // Request location on mount
   useEffect(() => {
@@ -80,6 +86,7 @@ export default function ReportPage() {
           { featureType: 'poi', stylers: [{ visibility: 'off' }] },
         ],
       });
+      mapInstanceRef.current = map;
 
       markerRef.current = new window.google.maps.Marker({
         position: pos,
@@ -146,7 +153,12 @@ export default function ReportPage() {
       const fd = new FormData();
       fd.append('image', file);
       fd.append('description', description || 'Civic issue');
-      const res = await fetch('/api/ai/categorize', { method: 'POST', body: fd });
+      const token = await getAuthToken();
+      const res = await fetch('/api/ai/categorize', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd,
+      });
       const data = await res.json();
       if (data.success) {
         setAiPreview(data);
@@ -191,7 +203,12 @@ export default function ReportPage() {
         fd.append('duplicateOverride', 'true');
       }
 
-      const res = await fetch('/api/issues', { method: 'POST', body: fd });
+      const token = await getAuthToken();
+      const res = await fetch('/api/issues', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd,
+      });
       const result = await res.json();
 
       if (res.status === 409 && result.duplicateWarning) {

@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 
 export default function TrackPage() {
-  const { user } = useAuth();
+  const { user, getAuthToken } = useAuth();
   const [viewMode, setViewMode] = useState<'map' | 'list'>('list');
   
   // Filter states
@@ -43,9 +43,13 @@ export default function TrackPage() {
     setValidationLoading(issueId);
 
     try {
+      const token = await getAuthToken();
       const response = await fetch(`/api/issues/${issueId}/validate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           userId: user.id,
           userRole: user.role,

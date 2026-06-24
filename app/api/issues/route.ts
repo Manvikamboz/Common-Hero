@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminServices } from '@/lib/firebase-admin';
+import { getAdminServices, uploadToStorage } from '@/lib/firebase-admin';
 import { categorizeIssue, generateEmbedding, generateAutoSummary } from '@/lib/gemini';
 import { getCosineSimilarity, getHaversineDistance } from '@/lib/maps';
 import { verifyAuth } from '@/lib/auth-middleware';
@@ -196,9 +196,10 @@ export async function POST(request: NextRequest) {
       imageBuffer = fileHardenResult.hardenedBuffer;
       imageMime = fileHardenResult.mimeType;
 
-      // Mock Upload: in production save to Firebase Storage using adminStorageInstance
-      const mockUrl = `https://firebasestorage.googleapis.com/v0/b/mock-bucket/o/issues%2F${Date.now()}_report.webp`;
-      mediaUrls.push(mockUrl);
+      // Upload to actual Firebase Storage using admin SDK
+      const filename = `issues/${Date.now()}_report.webp`;
+      const publicUrl = await uploadToStorage(imageBuffer, imageMime, filename);
+      mediaUrls.push(publicUrl);
     }
 
     // 6. Gemini Vision AI Analysis with Graceful Degradation
