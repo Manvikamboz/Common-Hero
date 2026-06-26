@@ -2,7 +2,23 @@
 
 Welcome to the **Community Hero** repository. This project is a hyperlocal, community-driven civic issue reporting and resolution platform powered by **Google AI Studio (Gemini API)**, built on **Next.js 14 (App Router)** and **Firebase**.
 
+![Vibe Coding Demo](./public/vibe_coding.gif)
+
 For the comprehensive technical blueprint, design architecture, database schema, AI configurations, and deployment strategies, see the [Technical Blueprint](file:///home/manvi/.gemini/antigravity/brain/27caca2a-c6e4-46a4-a4e4-1ff2e4c6dc0f/artifacts/technical_blueprint.md).
+
+---
+
+## Key Features & Recent Accomplishments
+
+### 👤 Citizen Profile & Demographic Onboarding
+* **Interactive Questionnaire**: A beautiful 5-step demographic profile wizard capturing details like `name`, `age`, `gender`, `dob`, and `email`.
+* **Dynamic Avatar Selection**: A deterministic demographic-matching engine that maps user answers to one of 10 customized citizen avatars pre-loaded in the public assets.
+* **Firestore Persistence**: Fully integrated with Firestore to persist profile information with server-side write endpoints.
+
+### 🛡️ Infrastructure Resilience & Self-Healing Storage
+* **Base64 Inline Fallback**: To prevent `500 Internal Server Errors` when the Firebase Storage bucket is not created, the backend automatically falls back to inline WebP base64 encoding inside Firestore documents.
+* **Unified API Feeds**: Replaced client-side Firebase SDK fetches on the Live Map and Tracking pages with server-side Next.js serverless route calls. This successfully bypasses client-side App Check token exchange issues and permission restrictions.
+* **Polished Leaderboard Fallback**: Implemented a fallback leaderboard ranking mechanism displaying mock leaders and real-time active user stats when database security rules restrict client-side reads.
 
 ---
 
@@ -52,3 +68,4 @@ For the comprehensive technical blueprint, design architecture, database schema,
 ```
 
 For full implementation schedules and API payloads, refer to the [Technical Blueprint](file:///home/manvi/.gemini/antigravity/brain/27caca2a-c6e4-46a4-a4e4-1ff2e4c6dc0f/artifacts/technical_blueprint.md).
+
