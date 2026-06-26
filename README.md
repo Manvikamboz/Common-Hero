@@ -2,7 +2,9 @@
 
 Welcome to the **Community Hero** repository. This project is a hyperlocal, community-driven civic issue reporting and resolution platform powered by **Google AI Studio (Gemini API)**, built on **Next.js 14 (App Router)** and **Firebase**.
 
-![Vibe Coding Demo](./public/vibe_coding.gif)
+<p align="center">
+  <img src="./public/vibe_coding.gif" alt="Vibe Coding Demo" />
+</p>
 
 For the comprehensive technical blueprint, design architecture, database schema, AI configurations, and deployment strategies, see the [Technical Blueprint](file:///home/manvi/.gemini/antigravity/brain/27caca2a-c6e4-46a4-a4e4-1ff2e4c6dc0f/artifacts/technical_blueprint.md).
 
