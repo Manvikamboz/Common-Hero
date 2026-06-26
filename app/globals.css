@@ -3,32 +3,32 @@
 @tailwind utilities;
 
 :root {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 5%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 263.4 70% 50.4%; /* Purple */
-  --primary-foreground: 210 20% 98%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 85.7% 97.3%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 263.4 70% 50.4%;
+  --background: 154 50% 5%; /* #031c12 - Deep forest green background */
+  --foreground: 142 30% 95%; /* #f0fdf4 - Light mint white text */
+  --card: 154 45% 7%; /* #052618 - Darker green card background */
+  --card-foreground: 142 30% 95%;
+  --popover: 154 50% 5%;
+  --popover-foreground: 142 30% 95%;
+  --primary: 142 70% 45%; /* #22c55e - Primary mint/green accent */
+  --primary-foreground: 154 50% 5%;
+  --secondary: 154 30% 12%; /* #092c1d */
+  --secondary-foreground: 142 30% 95%;
+  --muted: 154 30% 12%;
+  --muted-foreground: 142 15% 70%;
+  --accent: 142 70% 45%;
+  --accent-foreground: 154 50% 5%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 154 25% 12%;
+  --input: 154 25% 12%;
+  --ring: 142 70% 45%;
   
-  /* Status colors */
+  /* Status colors matching the green/warm tones of the palette */
   --status-reported: 48 96% 53%; /* Gold/Warning */
   --status-open: 200 98% 39%; /* Blue */
-  --status-validated: 262 83% 58%; /* Purple */
+  --status-validated: 142 70% 45%; /* Green */
   --status-assigned: 16 100% 50%; /* Orange */
-  --status-resolved: 142 71% 45%; /* Green */
+  --status-resolved: 160 84% 39%; /* Darker teal/green */
   --status-archived: 240 5% 35%; /* Muted Gray */
 }
 
@@ -36,9 +36,9 @@ body {
   color: hsl(var(--foreground));
   background-color: hsl(var(--background));
   background-image: 
-    radial-gradient(at 0% 0%, hsla(263, 70%, 50%, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(190, 80%, 40%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, hsla(320, 80%, 50%, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, hsla(142, 70%, 45%, 0.12) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(158, 64%, 40%, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, hsla(142, 70%, 45%, 0.05) 0px, transparent 50%);
   background-attachment: fixed;
   font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
@@ -47,30 +47,30 @@ body {
 
 /* Custom premium classes */
 .glass-card {
-  background: rgba(20, 20, 25, 0.65);
+  background: rgba(3, 28, 18, 0.65);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(134, 239, 172, 0.08);
   border-radius: 1rem;
 }
 
 .glass-nav {
-  background: rgba(10, 10, 12, 0.75);
+  background: rgba(3, 24, 15, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(134, 239, 172, 0.06);
 }
 
 .glow-purple {
-  box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 25px -5px rgba(34, 197, 94, 0.25);
 }
 
 .glow-emerald {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 25px -5px rgba(52, 211, 153, 0.25);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #a78bfa 0%, #38bdf8 50%, #f472b6 100%);
+  background: linear-gradient(135deg, #a7f3d0 0%, #34d399 50%, #059669 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -81,12 +81,12 @@ body {
 
 @keyframes pulseBorder {
   0% {
-    border-color: rgba(139, 92, 246, 0.2);
-    box-shadow: 0 0 5px rgba(139, 92, 246, 0.1);
+    border-color: rgba(34, 197, 94, 0.2);
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.1);
   }
   100% {
-    border-color: rgba(139, 92, 246, 0.6);
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+    border-color: rgba(34, 197, 94, 0.6);
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
   }
 }
 

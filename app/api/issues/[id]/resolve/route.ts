@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminServices } from '@/lib/firebase-admin';
+import { getAdminServices, uploadToStorage } from '@/lib/firebase-admin';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { ResolveIssueSchema } from '@/lib/validation';
 import { hardenUploadedFile } from '@/lib/media-harden';
@@ -58,8 +58,15 @@ export async function POST(
         );
       }
 
-      // Mock Upload: in production save to Firebase Storage
-      resolutionProofUrl = `https://firebasestorage.googleapis.com/v0/b/mock-bucket/o/resolutions%2F${Date.now()}_proof.webp`;
+      // Upload to actual Firebase Storage using admin SDK with base64 fallback
+      const filename = `resolutions/${Date.now()}_proof.webp`;
+      try {
+        resolutionProofUrl = await uploadToStorage(fileHardenResult.hardenedBuffer, fileHardenResult.mimeType, filename);
+      } catch (storageErr) {
+        console.warn('Firebase Storage upload failed (bucket not created). Falling back to base64 inline encoding:', storageErr);
+        const base64Str = fileHardenResult.hardenedBuffer.toString('base64');
+        resolutionProofUrl = `data:${fileHardenResult.mimeType};base64,${base64Str}`;
+      }
     }
 
     const issueRef = adminDb.collection('issues').doc(issueId);

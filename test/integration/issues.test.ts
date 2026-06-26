@@ -28,6 +28,7 @@ vi.mock('@/lib/firebase-admin', () => {
         }),
       },
     }),
+    uploadToStorage: vi.fn().mockResolvedValue('https://firebasestorage.googleapis.com/v0/b/mock-bucket/o/issues%2Fmock_report.webp'),
   };
 });
 

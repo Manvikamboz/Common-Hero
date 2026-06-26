@@ -25,6 +25,7 @@ export async function getAdminServices() {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${projectId || 'common-hero'}.appspot.com`;
 
     if (projectId && clientEmail && privateKey) {
       adminApp = initializeApp({
@@ -33,12 +34,12 @@ export async function getAdminServices() {
           clientEmail,
           privateKey: privateKey.replace(/\\n/g, '\n'),
         }),
-        storageBucket: `${projectId}.appspot.com`,
+        storageBucket,
       });
     } else {
       adminApp = initializeApp({
         projectId: projectId || 'common-hero',
-        storageBucket: `${projectId || 'common-hero'}.appspot.com`,
+        storageBucket,
       });
     }
   }
@@ -52,4 +53,19 @@ export async function getAdminServices() {
     adminAuth: adminAuthInstance, 
     adminStorage: adminStorageInstance 
   };
+}
+
+export async function uploadToStorage(buffer: Buffer, mimeType: string, path: string): Promise<string> {
+  const { adminStorage } = await getAdminServices();
+  const bucket = adminStorage.bucket();
+  const file = bucket.file(path);
+  
+  await file.save(buffer, {
+    metadata: {
+      contentType: mimeType,
+    },
+    resumable: false,
+  });
+  
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media`;
 }

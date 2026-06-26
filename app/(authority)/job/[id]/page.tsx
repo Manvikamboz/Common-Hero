@@ -14,9 +14,11 @@ import {
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function JobResolutionPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { user, getAuthToken } = useAuth();
   const issueId = params.id;
 
   const [issue, setIssue] = useState<any | null>(null);
@@ -33,16 +35,40 @@ export default function JobResolutionPage({ params }: { params: { id: string } }
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    const isDemoMode =
+      !process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+      process.env.NEXT_PUBLIC_FIREBASE_API_KEY === 'mock-api-key' ||
+      issueId.startsWith('demo_');
+
     async function loadIssueDetails() {
+      if (isDemoMode) {
+        const mockIssue = {
+          id: issueId,
+          title: 'Large pothole near bus stop on MG Road',
+          description: 'Deep pothole approximately 60cm wide causing vehicle damage and significant hazard for two-wheelers and cyclists.',
+          category: 'pothole',
+          severity: 'high',
+          status: 'validated',
+          location: { latitude: 28.6139, longitude: 77.2090, address: 'MG Road, Near Bus Stop 12A, New Delhi' },
+          createdAt: new Date().toISOString(),
+          aiMetadata: { autoSummary: 'Action Brief: Fill deep pothole on MG Road using asphalt. Location Detail: Adjacent to Bus Stop 12A, affecting two-wheeler lane.' }
+        };
+        setIssue(mockIssue);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch('/api/issues');
+        const response = await fetch(`/api/issues/${issueId}`);
         const data = await response.json();
         if (data.success) {
-          const matched = data.issues.find((iss: any) => iss.id === issueId);
-          setIssue(matched || null);
+          setIssue(data.issue);
+        } else {
+          setIssue(null);
         }
       } catch (err) {
         console.error('Failed to load issue details: ', err);
+        setIssue(null);
       } finally {
         setLoading(false);
       }
@@ -69,13 +95,17 @@ export default function JobResolutionPage({ params }: { params: { id: string } }
     setErrorMsg(null);
 
     try {
+      const token = await getAuthToken();
       const formData = new FormData();
       formData.append('remarks', remarks);
-      formData.append('authorityId', 'authority_ward_12_road');
+      formData.append('authorityId', user?.id || 'authority_ward_12_road');
       formData.append('resolutionProof', proofFile);
 
       const response = await fetch(`/api/issues/${issueId}/resolve`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 

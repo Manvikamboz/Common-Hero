@@ -51,7 +51,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(() => {});
+                if (window.location.hostname === 'localhost') {
+                  navigator.serviceWorker.getRegistrations().then((registrations) => {
+                    for (let registration of registrations) {
+                      registration.unregister();
+                    }
+                  });
+                } else {
+                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                }
               });
             }
           `}

@@ -8,12 +8,14 @@ import {
 } from 'lucide-react';
 import { cn, formatDate, getSeverityClasses, getStatusClasses } from '@/lib/utils';
 import type { Issue, AnalyticsDashboard } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 
 type SortKey = 'severity' | 'createdAt' | 'category' | 'upvotes';
 
 const SEVERITY_WEIGHT: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
 
 export default function AuthorityDashboard() {
+  const { user, getAuthToken } = useAuth();
   const [jobs, setJobs] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('');
@@ -80,12 +82,21 @@ export default function AuthorityDashboard() {
     if (!bulkAction || selectedIds.size === 0) return;
     setBulkLoading(true);
     try {
+      const token = await getAuthToken();
       await Promise.all(
         Array.from(selectedIds).map((id) =>
           fetch(`/api/issues/${id}/validate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: 'authority_01', userRole: 'authority', status: 'valid', comments: `Bulk action: ${bulkAction}` }),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              userId: user?.id || 'authority_01',
+              userRole: user?.role || 'authority',
+              status: 'valid',
+              comments: `Bulk action: ${bulkAction}`,
+            }),
           })
         )
       );
