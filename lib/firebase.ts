@@ -21,7 +21,8 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 if (typeof window !== 'undefined') {
-  // Set the App Check debug token provided by the user
+  // Set the App Check debug token (plural is required by Firebase Web SDK, but we support both for compatibility)
+  (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN || true;
   (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
 
   try {

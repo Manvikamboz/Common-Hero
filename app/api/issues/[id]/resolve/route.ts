@@ -58,9 +58,15 @@ export async function POST(
         );
       }
 
-      // Upload to actual Firebase Storage using admin SDK
+      // Upload to actual Firebase Storage using admin SDK with base64 fallback
       const filename = `resolutions/${Date.now()}_proof.webp`;
-      resolutionProofUrl = await uploadToStorage(fileHardenResult.hardenedBuffer, fileHardenResult.mimeType, filename);
+      try {
+        resolutionProofUrl = await uploadToStorage(fileHardenResult.hardenedBuffer, fileHardenResult.mimeType, filename);
+      } catch (storageErr) {
+        console.warn('Firebase Storage upload failed (bucket not created). Falling back to base64 inline encoding:', storageErr);
+        const base64Str = fileHardenResult.hardenedBuffer.toString('base64');
+        resolutionProofUrl = `data:${fileHardenResult.mimeType};base64,${base64Str}`;
+      }
     }
 
     const issueRef = adminDb.collection('issues').doc(issueId);

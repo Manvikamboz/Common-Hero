@@ -89,31 +89,31 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Fallback to standard query for non-spatial lists
-    let query: any = adminDb.collection('issues');
+    let dbQuery: any = adminDb.collection('issues');
 
     if (status) {
       const statuses = status.split(',');
-      query = query.where('status', 'in', statuses);
+      dbQuery = dbQuery.where('status', 'in', statuses);
     }
     if (category) {
-      query = query.where('category', '==', category);
+      dbQuery = dbQuery.where('category', '==', category);
     }
 
-    // Default sorting
-    query = query.orderBy('createdAt', 'desc');
+    const snapshot = await dbQuery.get();
+    let issues = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
 
-    // Pagination cursor
+    // Sort by createdAt desc in memory to prevent Firestore composite index requirements
+    issues.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Apply pagination in memory
+    let startIndex = 0;
     if (lastDocId) {
-      const startDoc = await adminDb.collection('issues').doc(lastDocId).get();
-      if (startDoc.exists) {
-        query = query.startAfter(startDoc);
+      const idx = issues.findIndex((iss) => iss.id === lastDocId);
+      if (idx !== -1) {
+        startIndex = idx + 1;
       }
     }
-
-    query = query.limit(pageSize);
-
-    const snapshot = await query.get();
-    const issues = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    issues = issues.slice(startIndex, startIndex + pageSize);
 
     return NextResponse.json({ success: true, issues }, { status: 200 });
   } catch (error: any) {
@@ -196,10 +196,16 @@ export async function POST(request: NextRequest) {
       imageBuffer = fileHardenResult.hardenedBuffer;
       imageMime = fileHardenResult.mimeType;
 
-      // Upload to actual Firebase Storage using admin SDK
+      // Upload to actual Firebase Storage using admin SDK with base64 fallback
       const filename = `issues/${Date.now()}_report.webp`;
-      const publicUrl = await uploadToStorage(imageBuffer, imageMime, filename);
-      mediaUrls.push(publicUrl);
+      try {
+        const publicUrl = await uploadToStorage(imageBuffer, imageMime, filename);
+        mediaUrls.push(publicUrl);
+      } catch (storageErr) {
+        console.warn('Firebase Storage upload failed (bucket not created). Falling back to base64 inline encoding:', storageErr);
+        const base64Str = imageBuffer.toString('base64');
+        mediaUrls.push(`data:${imageMime};base64,${base64Str}`);
+      }
     }
 
     // 6. Gemini Vision AI Analysis with Graceful Degradation

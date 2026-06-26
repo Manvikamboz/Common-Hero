@@ -37,7 +37,7 @@ const DEMO_ISSUE: Issue = {
   status: 'validated',
   location: { latitude: 28.6139, longitude: 77.2090, address: 'MG Road, Near Bus Stop 12A, New Delhi', geohash: 'ttnfv2' },
   mediaUrls: [],
-  reportedBy: 'demo_user_001',
+  reportedBy: 'demo_citizen_001',
   createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
   upvotes: 14,
   validations: [

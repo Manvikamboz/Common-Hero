@@ -33,6 +33,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN || true;
       (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
     }
   }, []);
@@ -58,11 +59,11 @@ export default function LoginPage() {
     };
   }, []);
 
-  const handleDemoSignIn = (role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen') => {
+  const handleDemoSignIn = async (role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen') => {
     setError(null);
     setSuccess(null);
     try {
-      signInWithDemo(role);
+      await signInWithDemo(role);
       setSuccess('Logged in using local demo profile.');
       router.push('/');
     } catch (err: any) {
@@ -220,7 +221,7 @@ export default function LoginPage() {
         }
 
         try {
-          signInWithDemo(role, email);
+          await signInWithDemo(role, email);
           setSuccess('Logged in successfully!');
           router.push('/');
         } catch (err: any) {

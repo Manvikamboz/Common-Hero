@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   Trophy, Star, ShieldCheck, Camera, MapPin, Clock, CheckCircle,
   AlertTriangle, Loader2, ArrowRight, Medal, Flame, TrendingUp,
-  FileText, BarChart3, User
+  FileText, BarChart3, User, Edit, Sparkles, X, ChevronRight, ChevronLeft, UserCheck, Calendar, Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +45,9 @@ interface ProfileData {
     badges: Badge[];
     wardId?: string;
     createdAt: string;
+    age?: number;
+    gender?: string;
+    dob?: string;
   };
   issues: IssueItem[];
 }
@@ -101,6 +104,25 @@ function timeAgo(iso: string) {
   return `${months}mo ago`;
 }
 
+function getAvatarPath(age: number, gender: string): string {
+  const g = gender.toLowerCase();
+  const isFemale = g === 'female' || g === 'woman' || g === 'women';
+  const isMale = g === 'male' || g === 'man' || g === 'men';
+
+  if (isFemale || (!isMale && age % 2 === 0)) {
+    if (age <= 25) return '/Citizen Avatar/20 women citizen.png';
+    if (age <= 35) return '/Citizen Avatar/30 women citizen.png';
+    if (age <= 45) return '/Citizen Avatar/40 women citizen.png';
+    if (age <= 57) return '/Citizen Avatar/50 women citizen.png';
+    return '/Citizen Avatar/65 women citizen.png';
+  } else {
+    if (age <= 25) return '/Citizen Avatar/20 men citizen.png';
+    if (age <= 35) return '/Citizen Avatar/30 men citizen.png';
+    if (age <= 45) return '/Citizen Avatar/40 men citizen.png';
+    if (age <= 62) return '/Citizen Avatar/50 men citizen.png';
+    return '/Citizen Avatar/75 men citizen.png';
+  }
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -109,6 +131,17 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'reports' | 'badges'>('reports');
+
+  // Onboarding / Edit Profile states
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formName, setFormName] = useState('');
+  const [formAge, setFormAge] = useState('');
+  const [formGender, setFormGender] = useState('');
+  const [formDob, setFormDob] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [submittingOnboarding, setSubmittingOnboarding] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -133,10 +166,9 @@ export default function ProfilePage() {
             return;
           }
         }
-        // Fallback: use mock data built from auth user
-        setProfile(buildMockProfile(user));
-      } catch {
-        setProfile(buildMockProfile(user));
+        setError('Failed to load profile data.');
+      } catch (err: any) {
+        setError(err.message || 'Error loading profile data.');
       } finally {
         setLoading(false);
       }
@@ -144,6 +176,111 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, [user, getAuthToken]);
+
+  useEffect(() => {
+    if (profile) {
+      setFormName(profile.user.name || '');
+      setFormAge(profile.user.age?.toString() || '');
+      setFormGender(profile.user.gender || '');
+      setFormDob(profile.user.dob || '');
+      setFormEmail(profile.user.email || '');
+    }
+  }, [profile]);
+
+  const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const dobVal = e.target.value;
+    setFormDob(dobVal);
+    if (dobVal) {
+      const birthDate = new Date(dobVal);
+      const today = new Date();
+      let computedAge = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        computedAge--;
+      }
+      if (computedAge >= 0) {
+        setFormAge(computedAge.toString());
+      }
+    }
+  };
+
+  const handleNextStep = () => {
+    setOnboardingError(null);
+    if (currentStep === 1 && !formName.trim()) {
+      setOnboardingError('Name is required.');
+      return;
+    }
+    if (currentStep === 2) {
+      if (!formAge || Number(formAge) <= 0 || Number(formAge) > 120) {
+        setOnboardingError('Please enter a valid age (1-120).');
+        return;
+      }
+    }
+    if (currentStep === 3 && !formGender) {
+      setOnboardingError('Please select your gender.');
+      return;
+    }
+    if (currentStep === 4 && !formDob) {
+      setOnboardingError('Please enter your Date of Birth.');
+      return;
+    }
+    setCurrentStep((prev) => prev + 1);
+  };
+
+  const handlePrevStep = () => {
+    setOnboardingError(null);
+    setCurrentStep((prev) => prev - 1);
+  };
+
+  const handleOnboardingSubmit = async () => {
+    setOnboardingError(null);
+    if (!formEmail.trim() || !formEmail.includes('@')) {
+      setOnboardingError('Please enter a valid email address.');
+      return;
+    }
+
+    setSubmittingOnboarding(true);
+    try {
+      const token = await getAuthToken();
+      if (!user) return;
+
+      const finalAge = Number(formAge);
+      const avatarPath = getAvatarPath(finalAge, formGender);
+
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: formName,
+          age: finalAge,
+          gender: formGender,
+          dob: formDob,
+          email: formEmail,
+          photoUrl: avatarPath
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setShowOnboarding(false);
+          // Reload page to reflect changes
+          window.location.reload();
+          return;
+        }
+      }
+      
+      const data = await res.json();
+      setOnboardingError(data.error || 'Failed to update profile.');
+    } catch {
+      setOnboardingError('Network error updating profile.');
+    } finally {
+      setSubmittingOnboarding(false);
+    }
+  };
 
   // ── Loading state ──
   if (authLoading || loading) {
@@ -172,8 +309,34 @@ export default function ProfilePage() {
   const resolvedCount = issues.filter((i) => i.status === 'resolved').length;
   const openCount = issues.filter((i) => ['open', 'validated', 'in_progress'].includes(i.status)).length;
 
+  const isProfileIncomplete = !profileUser.age || !profileUser.gender || !profileUser.dob;
+
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-8 py-6">
+
+      {/* Onboarding Alert Banner */}
+      {isProfileIncomplete && (
+        <div className="glass-card p-4 bg-gradient-to-r from-violet-500/10 via-indigo-500/5 to-transparent border border-violet-500/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-violet-500/20 rounded-xl text-violet-400">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div className="text-center sm:text-left">
+              <h4 className="font-bold text-white text-sm">Complete Your Profile Onboarding</h4>
+              <p className="text-xs text-gray-400 mt-0.5">Provide your age, gender, and DOB to set your customized citizen avatar!</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setCurrentStep(1);
+              setShowOnboarding(true);
+            }}
+            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-violet-500/20 whitespace-nowrap"
+          >
+            Complete Setup
+          </button>
+        </div>
+      )}
 
       {/* ── Hero Card ── */}
       <div className="glass-card p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6 relative overflow-hidden">
@@ -201,7 +364,19 @@ export default function ProfilePage() {
 
         {/* Info */}
         <div className="flex flex-col gap-2 text-center sm:text-left flex-1 min-w-0">
-          <h1 className="text-2xl font-extrabold text-white tracking-tight truncate">{profileUser.name}</h1>
+          <div className="flex items-center gap-2 justify-center sm:justify-start">
+            <h1 className="text-2xl font-extrabold text-white tracking-tight truncate">{profileUser.name}</h1>
+            <button
+              onClick={() => {
+                setCurrentStep(1);
+                setShowOnboarding(true);
+              }}
+              className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              title="Edit Profile Info"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <p className="text-sm text-gray-400">{profileUser.email}</p>
           {profileUser.wardId && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
@@ -209,8 +384,14 @@ export default function ProfilePage() {
               <span>{profileUser.wardId.replace('_', ' ').toUpperCase()}</span>
             </div>
           )}
+          {profileUser.dob && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
+              <Calendar className="w-3.5 h-3.5 text-violet-400" />
+              <span>DOB: {new Date(profileUser.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} ({profileUser.age} yrs, {profileUser.gender})</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="w-3.5 h-3.5 text-violet-400" />
             <span>Member since {new Date(profileUser.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' })}</span>
           </div>
         </div>
@@ -393,6 +574,165 @@ export default function ProfilePage() {
                     <p className="text-[9px] text-gray-600 text-center">{b.hint}</p>
                   </div>
                 ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding / Edit Profile Modal */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="glass-card max-w-md w-full p-6 flex flex-col gap-6 relative border border-violet-500/20 shadow-2xl bg-zinc-950/95 rounded-2xl">
+            
+            {/* Close button */}
+            <button 
+              onClick={() => setShowOnboarding(false)} 
+              className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div>
+              <h3 className="text-xl font-extrabold text-white">Setup Your Profile</h3>
+              <p className="text-xs text-gray-400 mt-1">This will select your avatar based on age and gender.</p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between text-[10px] text-gray-500 font-bold uppercase tracking-wider font-mono">
+                <span>Question {currentStep} of 5</span>
+                <span>{Math.round((currentStep / 5) * 100)}% Complete</span>
+              </div>
+              <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-violet-600 to-indigo-600 transition-all duration-300"
+                  style={{ width: `${(currentStep / 5) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Step Content */}
+            <div className="min-h-[140px] flex flex-col justify-center">
+              {currentStep === 1 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your name?</label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                    placeholder="Enter your name"
+                  />
+                </div>
+              )}
+
+              {currentStep === 2 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your age?</label>
+                  <input
+                    type="number"
+                    value={formAge}
+                    onChange={(e) => setFormAge(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                    placeholder="Enter your age"
+                    min="1"
+                    max="120"
+                  />
+                </div>
+              )}
+
+              {currentStep === 3 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Select your gender</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['Male', 'Female', 'Other'].map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setFormGender(g)}
+                        className={cn(
+                          "py-3 rounded-xl border font-semibold text-sm transition-all duration-200",
+                          formGender === g
+                            ? "bg-violet-600/20 border-violet-500 text-white shadow-md"
+                            : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
+                        )}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 4 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Date of Birth (DOB)</label>
+                  <input
+                    type="date"
+                    value={formDob}
+                    onChange={handleDobChange}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                  />
+                </div>
+              )}
+
+              {currentStep === 5 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Email Address</label>
+                  <input
+                    type="email"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                    placeholder="Enter your email"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Onboarding Error display */}
+            {onboardingError && (
+              <p className="text-xs font-medium text-red-400">{onboardingError}</p>
+            )}
+
+            {/* Navigation Footer */}
+            <div className="flex justify-between items-center gap-4 mt-2">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                disabled={currentStep === 1 || submittingOnboarding}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-gray-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-all text-xs font-bold"
+              >
+                <ChevronLeft className="w-4 h-4" /> Back
+              </button>
+
+              {currentStep < 5 ? (
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold transition-all text-xs shadow-md shadow-violet-500/20"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleOnboardingSubmit}
+                  disabled={submittingOnboarding}
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold transition-all text-xs disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-violet-500/20"
+                >
+                  {submittingOnboarding ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      Save & Update <UserCheck className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
