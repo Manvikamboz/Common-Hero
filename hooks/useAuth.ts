@@ -32,7 +32,13 @@ export function useAuth() {
       citizen: {
         ...MOCK_USER,
         email: email || 'manvi@commonhero.app',
-      },
+        address: 'MG Road, New Delhi, India',
+        latitude: 28.6139,
+        longitude: 77.2090,
+        town: 'New Delhi',
+        state: 'Delhi',
+        district: 'New Delhi',
+      } as any,
       validator: {
         id: 'demo_validator_002',
         name: 'Jane Smith (Validator)',
@@ -44,7 +50,13 @@ export function useAuth() {
         badges: [],
         wardId: 'ward_12',
         createdAt: '2026-01-01T00:00:00Z',
-      },
+        address: 'MG Road, New Delhi, India',
+        latitude: 28.6139,
+        longitude: 77.2090,
+        town: 'New Delhi',
+        state: 'Delhi',
+        district: 'New Delhi',
+      } as any,
       authority: {
         id: 'demo_authority_003',
         name: 'Officer John Doe',
@@ -56,7 +68,13 @@ export function useAuth() {
         badges: [],
         wardId: 'ward_12',
         createdAt: '2026-01-01T00:00:00Z',
-      },
+        address: 'MG Road, New Delhi, India',
+        latitude: 28.6139,
+        longitude: 77.2090,
+        town: 'New Delhi',
+        state: 'Delhi',
+        district: 'New Delhi',
+      } as any,
       admin: {
         id: 'demo_admin_004',
         name: 'System Admin',
@@ -68,7 +86,13 @@ export function useAuth() {
         badges: [],
         wardId: 'ward_12',
         createdAt: '2026-01-01T00:00:00Z',
-      }
+        address: 'MG Road, New Delhi, India',
+        latitude: 28.6139,
+        longitude: 77.2090,
+        town: 'New Delhi',
+        state: 'Delhi',
+        district: 'New Delhi',
+      } as any
     };
     
     const selectedUser = demoProfiles[role] || demoProfiles.citizen;
@@ -107,6 +131,29 @@ export function useAuth() {
             setUser({ id: userSnap.id, ...userSnap.data() } as User);
           } else {
             // First-time sign in: create profile in Firestore
+            let defaultLoc = { address: 'Unknown Location', latitude: 0, longitude: 0, town: '', state: '', district: '' };
+            try {
+              const res = await fetch('https://ipapi.co/json/');
+              if (res.ok) {
+                const data = await res.json();
+                if (data.latitude && data.longitude) {
+                  const city = data.city || '';
+                  const region = data.region || '';
+                  const country = data.country_name || '';
+                  defaultLoc = {
+                    address: [city, region, country].filter(Boolean).join(', ') || 'Unknown Location',
+                    latitude: Number(data.latitude),
+                    longitude: Number(data.longitude),
+                    town: city,
+                    state: region,
+                    district: data.city || '',
+                  };
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to fetch default IP location on signup:', err);
+            }
+
             const newUser: User = {
               id: firebaseUser.uid,
               name: firebaseUser.displayName || 'Anonymous',
@@ -118,7 +165,13 @@ export function useAuth() {
               issuesValidated: 0,
               badges: [],
               createdAt: new Date().toISOString(),
-            };
+              address: defaultLoc.address,
+              latitude: defaultLoc.latitude,
+              longitude: defaultLoc.longitude,
+              town: defaultLoc.town,
+              state: defaultLoc.state,
+              district: defaultLoc.district,
+            } as any;
             await setDoc(userRef, newUser);
             setUser(newUser);
           }

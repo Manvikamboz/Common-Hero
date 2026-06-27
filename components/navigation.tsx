@@ -83,10 +83,14 @@ export default function Navigation() {
     <>
       {/* Desktop Top Navbar */}
       <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 glass-nav items-center justify-between px-8 z-50">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <span className="font-bold text-white text-base">CH</span>
-          </div>
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image
+            src="/Community_Hero_logo.png"
+            alt="Community Hero Logo"
+            width={36}
+            height={36}
+            className="w-9 h-9 object-contain rounded-lg"
+          />
           <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
             CommunityHero
           </span>

@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     // Apply pagination in memory
     let startIndex = 0;
     if (lastDocId) {
-      const idx = issues.findIndex((iss) => iss.id === lastDocId);
+      const idx = issues.findIndex((iss: any) => iss.id === lastDocId);
       if (idx !== -1) {
         startIndex = idx + 1;
       }

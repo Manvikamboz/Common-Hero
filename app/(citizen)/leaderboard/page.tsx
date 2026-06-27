@@ -22,16 +22,6 @@ const BADGE_DEFINITIONS = [
   { id: 'data_driven', name: 'Data Driven', description: 'Your report triggered an AI prediction', icon: TrendingUp, color: 'text-teal-400', bg: 'bg-teal-500/10', border: 'border-teal-500/20' },
 ];
 
-const MOCK_LEADERS: User[] = [
-  { id: 'leader_1', name: 'Aarav Sharma', email: 'aarav@commonhero.app', role: 'citizen', points: 390, issuesReported: 15, issuesValidated: 24, badges: [{ id: 'first_report', name: 'First Reporter', description: 'Submit your first validated civic report', awardedAt: new Date().toISOString() }], createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'leader_2', name: 'Priya Patel', email: 'priya@commonhero.app', role: 'citizen', points: 310, issuesReported: 12, issuesValidated: 19, badges: [{ id: 'impact_maker', name: 'Impact Maker', description: '5 of your reports have been resolved', awardedAt: new Date().toISOString() }], createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'leader_3', name: 'Rohan Gupta', email: 'rohan@commonhero.app', role: 'citizen', points: 280, issuesReported: 9, issuesValidated: 14, badges: [], createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'demo_citizen_001', name: 'Manvi Kamboj', email: 'manvi@commonhero.app', role: 'citizen', points: 240, issuesReported: 8, issuesValidated: 18, badges: [{ id: 'neighborhood_watch', name: 'Neighborhood Watch', description: 'Submit 10 validated reports', awardedAt: new Date().toISOString() }], createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'leader_5', name: 'Ananya Iyer', email: 'ananya@commonhero.app', role: 'citizen', points: 210, issuesReported: 7, issuesValidated: 12, badges: [], createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'leader_6', name: 'Kabir Singh', email: 'kabir@commonhero.app', role: 'citizen', points: 190, issuesReported: 6, issuesValidated: 10, badges: [], createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'leader_7', name: 'Diya Sen', email: 'diya@commonhero.app', role: 'citizen', points: 150, issuesReported: 5, issuesValidated: 8, badges: [], createdAt: '2026-01-01T00:00:00Z' }
-];
-
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [leaders, setLeaders] = useState<User[]>([]);
@@ -51,26 +41,8 @@ export default function LeaderboardPage() {
         const snap = await getDocs(q);
         setLeaders(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User)));
       } catch (err: any) {
-        console.warn('Failed to load leaderboard from Firestore, falling back to mock leaderboard:', err);
-        // Build leaderboard fallback using mock data featuring the current active user
-        let baseLeaders = [...MOCK_LEADERS];
-        if (user) {
-          const userIdx = baseLeaders.findIndex(l => l.id === user.id);
-          if (userIdx !== -1) {
-            baseLeaders[userIdx] = { 
-              ...baseLeaders[userIdx], 
-              name: user.name, 
-              email: user.email,
-              points: user.points, 
-              issuesReported: user.issuesReported, 
-              issuesValidated: user.issuesValidated 
-            };
-          } else {
-            baseLeaders.push(user);
-          }
-        }
-        baseLeaders.sort((a, b) => b.points - a.points);
-        setLeaders(baseLeaders);
+        console.error('Failed to load leaderboard from Firestore:', err);
+        setError('Failed to load leaderboard. Please check your connection.');
       } finally {
         setLoading(false);
       }

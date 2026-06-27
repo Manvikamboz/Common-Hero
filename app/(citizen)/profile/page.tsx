@@ -48,6 +48,10 @@ interface ProfileData {
     age?: number;
     gender?: string;
     dob?: string;
+    town?: string;
+    state?: string;
+    district?: string;
+    address?: string;
   };
   issues: IssueItem[];
 }
@@ -140,6 +144,9 @@ export default function ProfilePage() {
   const [formGender, setFormGender] = useState('');
   const [formDob, setFormDob] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formTown, setFormTown] = useState('');
+  const [formStateVal, setFormStateVal] = useState('');
+  const [formDistrict, setFormDistrict] = useState('');
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [submittingOnboarding, setSubmittingOnboarding] = useState(false);
 
@@ -184,6 +191,9 @@ export default function ProfilePage() {
       setFormGender(profile.user.gender || '');
       setFormDob(profile.user.dob || '');
       setFormEmail(profile.user.email || '');
+      setFormTown(profile.user.town || '');
+      setFormStateVal(profile.user.state || '');
+      setFormDistrict(profile.user.district || '');
     }
   }, [profile]);
 
@@ -224,6 +234,22 @@ export default function ProfilePage() {
       setOnboardingError('Please enter your Date of Birth.');
       return;
     }
+    if (currentStep === 5 && (!formEmail.trim() || !formEmail.includes('@'))) {
+      setOnboardingError('Please enter a valid email address.');
+      return;
+    }
+    if (currentStep === 6 && !formTown.trim()) {
+      setOnboardingError('Please enter your Town/Village/City.');
+      return;
+    }
+    if (currentStep === 7 && !formStateVal.trim()) {
+      setOnboardingError('Please enter your State.');
+      return;
+    }
+    if (currentStep === 8 && !formDistrict.trim()) {
+      setOnboardingError('Please enter your District.');
+      return;
+    }
     setCurrentStep((prev) => prev + 1);
   };
 
@@ -234,8 +260,16 @@ export default function ProfilePage() {
 
   const handleOnboardingSubmit = async () => {
     setOnboardingError(null);
-    if (!formEmail.trim() || !formEmail.includes('@')) {
-      setOnboardingError('Please enter a valid email address.');
+    if (!formTown.trim()) {
+      setOnboardingError('Please enter your Town/Village/City.');
+      return;
+    }
+    if (!formStateVal.trim()) {
+      setOnboardingError('Please enter your State.');
+      return;
+    }
+    if (!formDistrict.trim()) {
+      setOnboardingError('Please enter your District.');
       return;
     }
 
@@ -259,7 +293,10 @@ export default function ProfilePage() {
           gender: formGender,
           dob: formDob,
           email: formEmail,
-          photoUrl: avatarPath
+          photoUrl: avatarPath,
+          town: formTown,
+          state: formStateVal,
+          district: formDistrict,
         })
       });
 
@@ -309,7 +346,7 @@ export default function ProfilePage() {
   const resolvedCount = issues.filter((i) => i.status === 'resolved').length;
   const openCount = issues.filter((i) => ['open', 'validated', 'in_progress'].includes(i.status)).length;
 
-  const isProfileIncomplete = !profileUser.age || !profileUser.gender || !profileUser.dob;
+  const isProfileIncomplete = !profileUser.age || !profileUser.gender || !profileUser.dob || !profileUser.town || !profileUser.state || !profileUser.district;
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-8 py-6">
@@ -323,7 +360,7 @@ export default function ProfilePage() {
             </div>
             <div className="text-center sm:text-left">
               <h4 className="font-bold text-white text-sm">Complete Your Profile Onboarding</h4>
-              <p className="text-xs text-gray-400 mt-0.5">Provide your age, gender, and DOB to set your customized citizen avatar!</p>
+              <p className="text-xs text-gray-400 mt-0.5">Provide your age, gender, DOB, and address details to complete your setup!</p>
             </div>
           </div>
           <button
@@ -382,6 +419,12 @@ export default function ProfilePage() {
             <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
               <MapPin className="w-3.5 h-3.5 text-violet-400" />
               <span>{profileUser.wardId.replace('_', ' ').toUpperCase()}</span>
+            </div>
+          )}
+          {profileUser.address && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
+              <MapPin className="w-3.5 h-3.5 text-violet-400" />
+              <span>Address: {profileUser.address}</span>
             </div>
           )}
           {profileUser.dob && (
@@ -601,13 +644,13 @@ export default function ProfilePage() {
             {/* Progress bar */}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between text-[10px] text-gray-500 font-bold uppercase tracking-wider font-mono">
-                <span>Question {currentStep} of 5</span>
-                <span>{Math.round((currentStep / 5) * 100)}% Complete</span>
+                <span>Question {currentStep} of 8</span>
+                <span>{Math.round((currentStep / 8) * 100)}% Complete</span>
               </div>
               <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-violet-600 to-indigo-600 transition-all duration-300"
-                  style={{ width: `${(currentStep / 5) * 100}%` }}
+                  style={{ width: `${(currentStep / 8) * 100}%` }}
                 />
               </div>
             </div>
@@ -689,6 +732,45 @@ export default function ProfilePage() {
                   />
                 </div>
               )}
+
+              {currentStep === 6 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your town/village/city?</label>
+                  <input
+                    type="text"
+                    value={formTown}
+                    onChange={(e) => setFormTown(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                    placeholder="e.g. New Delhi"
+                  />
+                </div>
+              )}
+
+              {currentStep === 7 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your state?</label>
+                  <input
+                    type="text"
+                    value={formStateVal}
+                    onChange={(e) => setFormStateVal(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                    placeholder="e.g. Delhi"
+                  />
+                </div>
+              )}
+
+              {currentStep === 8 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your Districts?</label>
+                  <input
+                    type="text"
+                    value={formDistrict}
+                    onChange={(e) => setFormDistrict(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                    placeholder="e.g. Central Delhi"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Onboarding Error display */}
@@ -707,7 +789,7 @@ export default function ProfilePage() {
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
 
-              {currentStep < 5 ? (
+              {currentStep < 8 ? (
                 <button
                   type="button"
                   onClick={handleNextStep}

@@ -1,13 +1,15 @@
 let adminDbInstance: any = null;
 let adminAuthInstance: any = null;
 let adminStorageInstance: any = null;
+let adminMessagingInstance: any = null;
 
 export async function getAdminServices() {
   if (adminDbInstance) {
     return { 
       adminDb: adminDbInstance, 
       adminAuth: adminAuthInstance, 
-      adminStorage: adminStorageInstance 
+      adminStorage: adminStorageInstance,
+      adminMessaging: adminMessagingInstance
     };
   }
 
@@ -16,6 +18,7 @@ export async function getAdminServices() {
   const { getFirestore } = await import('firebase-admin/firestore');
   const { getAuth } = await import('firebase-admin/auth');
   const { getStorage } = await import('firebase-admin/storage');
+  const { getMessaging } = await import('firebase-admin/messaging');
 
   const apps = getApps();
   let adminApp;
@@ -47,11 +50,13 @@ export async function getAdminServices() {
   adminDbInstance = getFirestore(adminApp);
   adminAuthInstance = getAuth(adminApp);
   adminStorageInstance = getStorage(adminApp);
+  adminMessagingInstance = getMessaging(adminApp);
 
   return { 
     adminDb: adminDbInstance, 
     adminAuth: adminAuthInstance, 
-    adminStorage: adminStorageInstance 
+    adminStorage: adminStorageInstance,
+    adminMessaging: adminMessagingInstance
   };
 }
 

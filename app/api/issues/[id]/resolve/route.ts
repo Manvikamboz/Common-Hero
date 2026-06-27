@@ -3,6 +3,7 @@ import { getAdminServices, uploadToStorage } from '@/lib/firebase-admin';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { ResolveIssueSchema } from '@/lib/validation';
 import { hardenUploadedFile } from '@/lib/media-harden';
+import { sendPushNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,8 +108,21 @@ export async function POST(
         }
       }
 
-      return { reporterId, reporterPointsAwarded };
+      return { reporterId, reporterPointsAwarded, issueTitle: issueData.title || 'Civic Issue' };
     });
+
+    // 4. Send FCM Push Notification to Reporter
+    if (result.reporterId && result.reporterId !== 'anonymous') {
+      sendPushNotification(result.reporterId, {
+        title: 'Issue Resolved!',
+        body: `Your reported issue "${result.issueTitle}" has been resolved. View proof photo now.`,
+        data: {
+          issueId,
+          type: 'status_change',
+          newStatus: 'resolved',
+        },
+      }).catch((err) => console.error('[FCM Resolve Alert] Dispatch error: ', err));
+    }
 
     return NextResponse.json(
       {
