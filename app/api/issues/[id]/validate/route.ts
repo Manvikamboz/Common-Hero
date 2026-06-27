@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
 import { verifyAuth } from '@/lib/auth-middleware';
 import { ValidateIssueSchema } from '@/lib/validation';
+import { sendPushNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,16 +84,25 @@ export async function POST(
       const updatedValidations = [...currentValidations, newValidation];
       const newUpvotes = (issueData.upvotes || 0) + 1;
 
-      // Update issue status if validated by a verified Validator
+      // Update issue status if validated by a verified Validator, or authority bulk actions
       let newStatus = issueData.status;
+      let newSeverity = issueData.severity;
+
       if (userRole === 'validator' && status === 'valid') {
         newStatus = 'validated';
+      } else if ((userRole === 'authority' || userRole === 'admin') && comments?.startsWith('Bulk action:')) {
+        if (comments.includes('assign')) {
+          newStatus = 'assigned';
+        } else if (comments.includes('escalate')) {
+          newSeverity = issueData.severity === 'low' ? 'medium' : issueData.severity === 'medium' ? 'high' : 'critical';
+        }
       }
 
       transaction.update(issueRef, {
         validations: updatedValidations,
         upvotes: newUpvotes,
         status: newStatus,
+        severity: newSeverity,
       });
 
       // Update user profile (points & validation count)
@@ -108,8 +118,35 @@ export async function POST(
         });
       }
 
-      return { newStatus, newUpvotes, pointsAwarded };
+      return { 
+        newStatus, 
+        newUpvotes, 
+        pointsAwarded,
+        reporterId: issueData.reportedBy || null,
+        issueTitle: issueData.title || 'Civic Issue',
+        oldStatus: issueData.status,
+      };
     });
+
+    // 5. Send FCM Push Notification to Reporter on status changes
+    if (result.newStatus !== result.oldStatus && result.reporterId && result.reporterId !== 'anonymous') {
+      let notificationBody = `Your reported issue "${result.issueTitle}" status has updated to: ${result.newStatus}.`;
+      if (result.newStatus === 'validated') {
+        notificationBody = `Your reported issue "${result.issueTitle}" has been community validated.`;
+      } else if (result.newStatus === 'assigned') {
+        notificationBody = `Your reported issue "${result.issueTitle}" has been assigned to a repair crew.`;
+      }
+
+      sendPushNotification(result.reporterId, {
+        title: 'Issue Status Update',
+        body: notificationBody,
+        data: {
+          issueId,
+          type: 'status_change',
+          newStatus: result.newStatus,
+        },
+      }).catch((err) => console.error('[FCM Status Alert] Dispatch error: ', err));
+    }
 
     return NextResponse.json(
       {

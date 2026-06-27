@@ -50,7 +50,13 @@ export async function GET(
           issuesReported: 0,
           issuesValidated: 0,
           badges: [],
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          address: 'MG Road, New Delhi, India',
+          latitude: 28.6139,
+          longitude: 77.2090,
+          town: 'New Delhi',
+          state: 'Delhi',
+          district: 'New Delhi',
         };
 
         if (targetId === 'demo_citizen_001') {
@@ -67,6 +73,12 @@ export async function GET(
             ],
             wardId: 'ward_12',
             createdAt: '2026-01-01T00:00:00Z',
+            address: 'MG Road, New Delhi, India',
+            latitude: 28.6139,
+            longitude: 77.2090,
+            town: 'New Delhi',
+            state: 'Delhi',
+            district: 'New Delhi',
           };
         } else if (targetId === 'demo_validator_002') {
           demoProfile = {
@@ -79,6 +91,12 @@ export async function GET(
             badges: [],
             wardId: 'ward_12',
             createdAt: '2026-01-01T00:00:00Z',
+            address: 'MG Road, New Delhi, India',
+            latitude: 28.6139,
+            longitude: 77.2090,
+            town: 'New Delhi',
+            state: 'Delhi',
+            district: 'New Delhi',
           };
         } else if (targetId === 'demo_authority_003') {
           demoProfile = {
@@ -91,6 +109,12 @@ export async function GET(
             badges: [],
             wardId: 'ward_12',
             createdAt: '2026-01-01T00:00:00Z',
+            address: 'MG Road, New Delhi, India',
+            latitude: 28.6139,
+            longitude: 77.2090,
+            town: 'New Delhi',
+            state: 'Delhi',
+            district: 'New Delhi',
           };
         } else if (targetId === 'demo_admin_004') {
           demoProfile = {
@@ -103,6 +127,12 @@ export async function GET(
             badges: [],
             wardId: 'ward_12',
             createdAt: '2026-01-01T00:00:00Z',
+            address: 'MG Road, New Delhi, India',
+            latitude: 28.6139,
+            longitude: 77.2090,
+            town: 'New Delhi',
+            state: 'Delhi',
+            district: 'New Delhi',
           };
         }
 
@@ -160,10 +190,10 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, age, gender, dob, email, photoUrl } = body;
+    const { name, age, gender, dob, email, photoUrl, town, state, district } = body;
 
     // Basic validation
-    if (!name || age === undefined || !gender || !dob || !email) {
+    if (!name || age === undefined || !gender || !dob || !email || !town || !state || !district) {
       return NextResponse.json({ success: false, error: 'Missing required profile fields' }, { status: 400 });
     }
 
@@ -175,6 +205,10 @@ export async function PUT(
       gender,
       dob,
       email,
+      town,
+      state,
+      district,
+      address: [town, district, state].filter(Boolean).join(', '),
     };
 
     if (photoUrl) {

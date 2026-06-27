@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
@@ -291,9 +292,13 @@ export default function LoginPage() {
         
         {/* Header logo / slogan */}
         <div className="flex flex-col items-center text-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <ShieldCheck className="w-6 h-6 text-white" />
-          </div>
+          <Image
+            src="/Community_Hero_logo.png"
+            alt="Community Hero Logo"
+            width={48}
+            height={48}
+            className="w-12 h-12 object-contain rounded-xl"
+          />
           <h2 className="text-2xl font-bold tracking-tight text-white">Welcome to CommunityHero</h2>
           <p className="text-xs text-gray-400 max-w-xs">
             Report local issues, validation tickets, and earn civic contribution points.
@@ -502,12 +507,6 @@ export default function LoginPage() {
 
         {/* Invisible ReCAPTCHA Container */}
         <div id="recaptcha-container" ref={recaptchaContainerRef} className="mt-4"></div>
-
-        {/* Demo notification */}
-        <div className="flex items-center gap-2 mt-6 p-2 rounded bg-violet-500/5 border border-violet-500/10 text-center text-[10px] text-gray-500">
-          <Sparkles className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-          <span>If Firebase is in demo mode, auth will immediately resolve to a mock citizen profile.</span>
-        </div>
 
       </div>
     </div>

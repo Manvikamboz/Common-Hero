@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
 import { verifyAuth } from '@/lib/auth-middleware';
+import { sendPushNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,10 +71,27 @@ export async function POST(
         createdAt: new Date().toISOString(),
       });
 
-      return { success: true };
+      return {
+        success: true,
+        assignedAuthority: issueData.assignedAuthority || null,
+        issueTitle: issueData.title || 'Civic Issue',
+      };
     });
 
-    return NextResponse.json(result, { status: 200 });
+    // Send FCM Push Notification to Assigned Authority
+    if (result.assignedAuthority) {
+      sendPushNotification(result.assignedAuthority, {
+        title: 'Resolution Disputed!',
+        body: `A citizen has disputed the resolution of issue "${result.issueTitle}".`,
+        data: {
+          issueId,
+          type: 'status_change',
+          newStatus: 'open',
+        },
+      }).catch((err) => console.error('[FCM Dispute Alert] Dispatch error: ', err));
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
     console.error('Error disputing issue: ', error);
     return NextResponse.json(
