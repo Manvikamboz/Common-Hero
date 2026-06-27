@@ -25,11 +25,11 @@ const nextConfig = {
   async headers() {
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.googleapis.com https://apis.google.com https://www.google.com https://www.gstatic.com https://*.recaptcha.net https://recaptcha.net;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      img-src 'self' blob: data: https://maps.gstatic.com https://maps.googleapis.com https://firebasestorage.googleapis.com https://*.googleapis.com https://*.googleusercontent.com;
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.googleapis.com https://apis.google.com https://www.google.com https://www.gstatic.com https://*.recaptcha.net https://recaptcha.net https://unpkg.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com;
+      img-src 'self' blob: data: https://maps.gstatic.com https://maps.googleapis.com https://firebasestorage.googleapis.com https://*.googleapis.com https://*.googleusercontent.com https://unpkg.com https://*.tile.openstreetmap.org;
       font-src 'self' https://fonts.gstatic.com data:;
-      connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://maps.googleapis.com https://www.google.com https://*.recaptcha.net https://recaptcha.net;
+      connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://maps.googleapis.com https://www.google.com https://*.recaptcha.net https://recaptcha.net https://nominatim.openstreetmap.org;
       frame-src 'self' https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://*.recaptcha.net https://recaptcha.net;
       object-src 'none';
       base-uri 'self';

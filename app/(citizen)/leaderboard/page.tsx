@@ -33,15 +33,16 @@ export default function LeaderboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const q = query(
-          collection(db, 'users'),
-          orderBy('points', 'desc'),
-          limit(20)
-        );
-        const snap = await getDocs(q);
-        setLeaders(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User)));
+        const res = await fetch('/api/leaderboard');
+        if (!res.ok) throw new Error('Failed to fetch leaderboard data');
+        const data = await res.json();
+        if (data.success) {
+          setLeaders(data.leaders);
+        } else {
+          throw new Error(data.error || 'Failed to load leaderboard');
+        }
       } catch (err: any) {
-        console.error('Failed to load leaderboard from Firestore:', err);
+        console.error('Failed to load leaderboard:', err);
         setError('Failed to load leaderboard. Please check your connection.');
       } finally {
         setLoading(false);

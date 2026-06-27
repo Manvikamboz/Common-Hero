@@ -34,7 +34,7 @@ export async function categorizeIssue(
   }
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.5-flash',
     systemInstruction:
       'You are an expert municipal AI. Analyze the provided civic-issue image and citizen description. Classify it into the correct category, assess severity, and generate a concise action brief for repair crews. Return strict JSON.',
   });
@@ -247,7 +247,7 @@ export async function generatePredictiveInsights(recentIssuesJson: string): Prom
   if (!apiKey) return { predictions: [] };
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.5-flash',
     systemInstruction:
       'You are a senior urban planning AI analyst. Examine 90 days of civic issues data. Identify emerging clusters, predict categories likely to surge in next 14 days, and recommend concrete preventative maintenance steps.',
   });

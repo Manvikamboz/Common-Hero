@@ -16,6 +16,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useIssues } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/context/LanguageContext';
+import { NoticeBoard, HelplineDirectory } from '@/components/government';
 
 const SEVERITY_STYLE: Record<string, string> = {
   critical: 'bg-red-500/10 text-red-400 border-red-500/20',
@@ -27,24 +29,25 @@ const SEVERITY_STYLE: Record<string, string> = {
 export default function Home() {
   const { user } = useAuth();
   const { issues, loading } = useIssues({ pageLimit: 6 });
+  const { t } = useLanguage();
 
   return (
     <div className="flex flex-col gap-12 py-6">
       {/* Hero Section */}
       <section className="relative flex flex-col md:flex-row items-center justify-between gap-8 py-8 md:py-16 overflow-hidden">
         <div className="flex-1 flex flex-col gap-6 text-left z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-semibold w-fit animate-pulse">
-            <Zap className="w-3.5 h-3.5 fill-violet-400" />
-            Empowering Hyperlocal Civic Actions
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-600/10 border border-violet-600/20 text-violet-700 text-xs font-semibold w-fit">
+            <Zap className="w-3.5 h-3.5 fill-violet-600 text-violet-600" />
+            {t('tagline')}
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-none">
-            Report Civic Issues. <br />
-            <span className="gradient-text">Empower Your Ward.</span>
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-none text-zinc-900">
+            {t('heroTitlePre')} <br />
+            <span className="gradient-text">{t('heroTitlePost')}</span>
           </h1>
 
-          <p className="text-gray-400 text-lg max-w-xl">
-            Community Hero connects citizens, validators, and municipal teams in real time. Powered by Gemini AI for automated categorizing and priority mapping.
+          <p className="text-zinc-600 text-lg max-w-xl">
+            {t('heroDesc')}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mt-2">
@@ -53,46 +56,46 @@ export default function Home() {
               className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold px-8 py-4 rounded-xl shadow-lg shadow-violet-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
             >
               <Camera className="w-5 h-5" />
-              Report Issue Now
+              {t('reportNow')}
             </Link>
             <Link
               href="/track"
-              className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold px-8 py-4 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              className="flex items-center justify-center gap-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 font-bold px-8 py-4 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
             >
-              <MapPin className="w-5 h-5 text-sky-400" />
-              Track Open Tickets
+              <MapPin className="w-5 h-5 text-sky-600" />
+              {t('trackTickets')}
             </Link>
           </div>
         </div>
 
         {/* Feature highlights card */}
         <div className="flex-1 relative w-full max-w-lg mt-8 md:mt-0">
-          <div className="absolute inset-0 bg-gradient-to-tr from-violet-600/20 to-sky-600/20 blur-3xl -z-10" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-violet-600/10 to-sky-600/10 blur-3xl -z-10" />
           <div className="glass-card p-6 w-full flex flex-col gap-4 glow-purple border-white/15">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div className="flex items-center justify-between border-b border-zinc-200/50 pb-4">
               <div className="flex items-center gap-3">
                 <span className="relative flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
-                <span className="text-sm font-semibold tracking-wide uppercase text-emerald-400">Live</span>
+                <span className="text-sm font-semibold tracking-wide uppercase text-emerald-600">{t('live')}</span>
               </div>
               <span className="text-xs text-gray-500">
-                {loading ? 'Loading...' : `${issues.length} active incident${issues.length !== 1 ? 's' : ''}`}
+                {loading ? 'Loading...' : `${issues.length} ${issues.length === 1 ? t('activeIncident') : t('activeIncidents')}`}
               </span>
             </div>
 
-            <div className="rounded-xl bg-violet-950/20 border border-violet-500/20 p-4 flex flex-col gap-2">
+            <div className="rounded-xl bg-violet-600/5 border border-violet-600/20 p-4 flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-violet-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-violet-300 font-mono">Gemini AI Vision</span>
+                <Cpu className="w-4 h-4 text-violet-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-violet-700 font-mono">{t('aiVision')}</span>
               </div>
-              <p className="text-xs text-gray-300 leading-relaxed font-medium">
-                Auto-categorizes photos → assigns severity → runs duplicate check in 500m radius → routes to municipal authority.
+              <p className="text-xs text-gray-700 leading-relaxed font-medium">
+                {t('aiDesc')}
               </p>
-              <div className="flex items-center justify-between text-[10px] text-violet-400 font-mono mt-1 pt-1.5 border-t border-violet-500/10">
-                <span>Model: gemini-2.5-pro</span>
-                <span>Embeddings: gemini-embedding-001</span>
+              <div className="flex items-center justify-between text-[10px] text-violet-600 font-mono mt-1 pt-1.5 border-t border-violet-500/10">
+                <span>{t('aiModel')}</span>
+                <span>{t('aiEmbeddings')}</span>
               </div>
             </div>
           </div>
@@ -102,62 +105,68 @@ export default function Home() {
       {/* Features Row */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass-card p-6 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+          <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-600">
             <Trophy className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-white">Gamified Action</h3>
-            <p className="text-sm text-gray-400 mt-1">Earn 10 points per report and 15 points per verification. Unlock exclusive badges.</p>
+            <h3 className="font-bold text-lg text-zinc-800">{t('feature1Title')}</h3>
+            <p className="text-sm text-zinc-500 mt-1">{t('feature1Desc')}</p>
           </div>
         </div>
         <div className="glass-card p-6 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+          <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600">
             <MapPinIcon className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-white">Hyperlocal Auto-Routing</h3>
-            <p className="text-sm text-gray-400 mt-1">Issues are automatically routed using GeoJSON boundaries directly to assigned authorities.</p>
+            <h3 className="font-bold text-lg text-zinc-800">{t('feature2Title')}</h3>
+            <p className="text-sm text-zinc-500 mt-1">{t('feature2Desc')}</p>
           </div>
         </div>
         <div className="glass-card p-6 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-white">Zero-Spam Verification</h3>
-            <p className="text-sm text-gray-400 mt-1">Verified validators review reports locally to filter duplicates and ensure high-integrity tickets.</p>
+            <h3 className="font-bold text-lg text-zinc-800">{t('feature3Title')}</h3>
+            <p className="text-sm text-zinc-500 mt-1">{t('feature3Desc')}</p>
           </div>
         </div>
+      </section>
+
+      {/* Government Mandatory Notice Board & Helpline Directory */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <NoticeBoard />
+        <HelplineDirectory />
       </section>
 
       {/* Live Issues Feed */}
       <section className="flex flex-col gap-6 text-left">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-extrabold text-white">Live Tickets</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Real-time civic issues from your community</p>
+            <h2 className="text-2xl font-extrabold text-zinc-900">{t('liveTickets')}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{t('liveTicketsSub')}</p>
           </div>
-          <Link href="/track" className="text-sm font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1">
-            View All
+          <Link href="/track" className="text-sm font-semibold text-violet-600 hover:text-violet-500 flex items-center gap-1">
+            {t('viewAll')}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-            <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
             <span className="text-sm">Loading live issues...</span>
           </div>
         ) : issues.length === 0 ? (
           <div className="glass-card p-12 flex flex-col items-center gap-4 text-center border-white/5">
-            <Camera className="w-10 h-10 text-violet-500/40" />
-            <p className="font-bold text-white">No issues reported yet</p>
-            <p className="text-sm text-gray-400">Be the first to report a civic issue in your area.</p>
+            <Camera className="w-10 h-10 text-violet-600/40" />
+            <p className="font-bold text-zinc-800">{t('noIssues')}</p>
+            <p className="text-sm text-gray-400">{t('noIssuesDesc')}</p>
             <Link
               href="/report"
               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl text-white text-sm font-bold hover:opacity-90 transition-opacity"
             >
-              <Camera className="w-4 h-4" /> Report Now
+              <Camera className="w-4 h-4" /> {t('reportNowBtn')}
             </Link>
           </div>
         ) : (
@@ -178,22 +187,22 @@ export default function Home() {
                   <span className={cn(
                     'px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider',
                     report.status === 'resolved'
-                      ? 'bg-emerald-500/10 text-emerald-400'
-                      : 'bg-zinc-800 text-gray-400'
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                      : 'bg-zinc-100 text-zinc-500 border-zinc-200'
                   )}>
                     {report.status}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-white line-clamp-1 group-hover:text-violet-300 transition-colors">{report.title}</h3>
-                  <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <h3 className="font-bold text-zinc-800 line-clamp-1 group-hover:text-violet-600 transition-colors">{report.title}</h3>
+                  <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="truncate">{report.location?.address || 'Unknown location'}</span>
                   </p>
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-white/5 mt-auto">
-                  <span className="text-xs text-gray-500">{report.category}</span>
-                  <span className="text-xs font-bold text-violet-400">▲ {report.upvotes ?? 0} upvotes</span>
+                <div className="flex items-center justify-between pt-3 border-t border-zinc-200/50 mt-auto">
+                  <span className="text-xs text-zinc-400">{report.category}</span>
+                  <span className="text-xs font-bold text-violet-600">▲ {report.upvotes ?? 0} upvotes</span>
                 </div>
               </Link>
             ))}

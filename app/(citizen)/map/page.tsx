@@ -30,6 +30,15 @@ export default function MapPage() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [heatmapEnabled, setHeatmapEnabled] = useState(false);
   const [validationLoading, setValidationLoading] = useState<string | null>(null);
+  const [useFallbackMap, setUseFallbackMap] = useState(false);
+
+  // Set global fallback handler
+  useEffect(() => {
+    (window as any).gm_authFailure = () => {
+      console.warn("Google Maps authentication failed on main map. Falling back to Leaflet Map.");
+      setUseFallbackMap(true);
+    };
+  }, []);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<any>(null);
@@ -44,35 +53,123 @@ export default function MapPage() {
   });
 
   const initMap = useCallback(async () => {
-    if (!mapRef.current || !window.google) return;
+    if (!mapRef.current || !window.google?.maps) return;
 
-    const { Map } = window.google.maps;
-    const map = new Map(mapRef.current, {
-      center: { lat: 28.6139, lng: 77.2090 },
-      zoom: 12,
-      mapId: 'community_hero_map',
-      disableDefaultUI: false,
-      styles: [
-        { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
-        { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
-        { elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
-        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d2d44' }] },
-        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
-        { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-        { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-      ],
-    });
+    try {
+      const { Map } = window.google.maps;
+      if (!Map) {
+        setUseFallbackMap(true);
+        return;
+      }
+      const map = new Map(mapRef.current, {
+        center: { lat: 28.6139, lng: 77.2090 },
+        zoom: 12,
+        mapId: 'community_hero_map',
+        disableDefaultUI: false,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+          { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d2d44' }] },
+          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
+          { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+          { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+        ],
+      });
 
-    googleMapRef.current = map;
-    infoWindowRef.current = new window.google.maps.InfoWindow();
-    setMapLoaded(true);
+      googleMapRef.current = map;
+      infoWindowRef.current = new window.google.maps.InfoWindow();
+      setMapLoaded(true);
+    } catch (e) {
+      console.warn("Failed to initialize Google Map:", e);
+      setUseFallbackMap(true);
+    }
   }, []);
 
-  // Load Google Maps
+  // Load Map (Google Maps or Leaflet)
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const initLeafletMap = () => {
+      if (!mapRef.current) return;
+      
+      const L = (window as any).L;
+      if (!L) return;
+
+      // Clean up previous Leaflet map if it exists
+      if (googleMapRef.current) {
+        if (typeof googleMapRef.current.remove === 'function') {
+          try {
+            googleMapRef.current.remove();
+          } catch (e) {
+            console.warn("Failed to remove previous Leaflet map instance:", e);
+          }
+        }
+        googleMapRef.current = null;
+      }
+      
+      mapRef.current.innerHTML = '';
+      
+      const map = L.map(mapRef.current, {
+        center: [28.6139, 77.2090],
+        zoom: 12,
+        zoomControl: true,
+        attributionControl: false
+      });
+      googleMapRef.current = map;
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+      
+      setMapLoaded(true);
+
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
+    };
+
+    const loadLeaflet = () => {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+      }
+      
+      if (!document.getElementById('leaflet-js')) {
+        const script = document.createElement('script');
+        script.id = 'leaflet-js';
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.crossOrigin = '';
+        script.onload = () => {
+          initLeafletMap();
+        };
+        document.head.appendChild(script);
+      } else {
+        if ((window as any).L) {
+          initLeafletMap();
+        } else {
+          const existingScript = document.getElementById('leaflet-js');
+          if (existingScript) {
+            existingScript.addEventListener('load', () => {
+              initLeafletMap();
+            });
+          }
+        }
+      }
+    };
+
+    if (useFallbackMap) {
+      loadLeaflet();
+      return;
+    }
+
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
     if (!apiKey || apiKey === 'YOUR_MAPS_KEY') {
-      setMapLoaded(false);
+      setUseFallbackMap(true);
       return;
     }
 
@@ -81,23 +178,81 @@ export default function MapPage() {
       return;
     }
 
+    // Set a 3-second timeout fallback to Leaflet
+    timeoutId = setTimeout(() => {
+      if (!window.google?.maps || !googleMapRef.current) {
+        console.warn("Google Maps failed to load within timeout. Falling back to Leaflet Map.");
+        setUseFallbackMap(true);
+      }
+    }, 3000);
+
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=visualization,marker&callback=__initGoogleMap`;
     script.async = true;
-    (window as any).__initGoogleMap = initMap;
+    (window as any).__initGoogleMap = () => {
+      clearTimeout(timeoutId);
+      initMap();
+    };
     document.head.appendChild(script);
 
     return () => {
+      clearTimeout(timeoutId);
       delete (window as any).__initGoogleMap;
     };
-  }, [initMap]);
+  }, [initMap, useFallbackMap]);
 
   // Update markers when issues change
   useEffect(() => {
-    if (!googleMapRef.current || !window.google || !mapLoaded) return;
+    if (!googleMapRef.current || !mapLoaded) return;
 
-    // Clear old markers
-    markersRef.current.forEach((m) => m.setMap(null));
+    if (useFallbackMap) {
+      // Clear old markers safely
+      markersRef.current.forEach((m) => {
+        if (typeof m.remove === 'function') {
+          m.remove();
+        } else if (typeof m.setMap === 'function') {
+          m.setMap(null);
+        }
+      });
+      markersRef.current = [];
+
+      const L = (window as any).L;
+      if (!L) return;
+
+      const newMarkers = issues.map((issue) => {
+        const color = getMarkerColorByStatus(issue.status);
+        
+        // Leaflet Circle Marker
+        const marker = L.circleMarker([issue.location.latitude, issue.location.longitude], {
+          radius: 8,
+          fillColor: color,
+          fillOpacity: 0.9,
+          color: '#fff',
+          weight: 2
+        }).addTo(googleMapRef.current);
+
+        marker.on('click', () => {
+          setSelectedIssue(issue);
+          setPanelOpen(true);
+        });
+
+        return marker;
+      });
+
+      markersRef.current = newMarkers;
+      return;
+    }
+
+    if (!window.google) return;
+
+    // Clear old markers safely
+    markersRef.current.forEach((m) => {
+      if (typeof m.setMap === 'function') {
+        m.setMap(null);
+      } else if (typeof m.remove === 'function') {
+        m.remove();
+      }
+    });
     markersRef.current = [];
     if (clustererRef.current) {
       clustererRef.current.clearMarkers();
@@ -142,7 +297,7 @@ export default function MapPage() {
     } else if (heatmapRef.current) {
       heatmapRef.current.setMap(null);
     }
-  }, [issues, mapLoaded, heatmapEnabled]);
+  }, [issues, mapLoaded, heatmapEnabled, useFallbackMap]);
 
   const handleValidate = async (issueId: string) => {
     if (!user) return;
@@ -170,8 +325,6 @@ export default function MapPage() {
 
   const categories = ['pothole', 'streetlight', 'water', 'waste', 'encroachment', 'other'];
   const statuses = ['open', 'validated', 'assigned', 'in_progress', 'resolved'];
-  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  const hasMapsKey = mapsApiKey && mapsApiKey !== 'YOUR_MAPS_KEY' && mapsApiKey !== '';
 
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -279,47 +432,20 @@ export default function MapPage() {
         <div className="p-6 text-center text-red-400 bg-red-950/10 border border-red-500/20 rounded-xl">{error}</div>
       ) : viewMode === 'map' ? (
         <div className="relative">
-          {/* Map Container */}
+          {/* Map Container — mapRef is ALWAYS mounted so Leaflet can attach to it */}
           <div className="glass-card w-full h-[70vh] min-h-[500px] overflow-hidden relative border-white/10">
-            {hasMapsKey ? (
-              <div ref={mapRef} className="w-full h-full" />
-            ) : (
-              /* Demo Map Fallback */
-              <div className="w-full h-full bg-zinc-950 flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(34,197,94,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.3)_1px,transparent_1px)] bg-[size:40px_40px]" />
-                {/* Mock Issue Pins */}
-                {issues.map((issue, i) => {
-                  const positions = [
-                    { top: '25%', left: '30%' }, { top: '55%', left: '60%' }, { top: '35%', left: '70%' },
-                    { top: '70%', left: '25%' }, { top: '45%', left: '45%' },
-                  ];
-                  const pos = positions[i % positions.length];
-                  const color = getMarkerColorByStatus(issue.status);
-                  return (
-                    <button
-                      key={issue.id}
-                      onClick={() => { setSelectedIssue(issue); setPanelOpen(true); }}
-                      style={{ position: 'absolute', ...pos }}
-                      className="group flex flex-col items-center gap-1 z-10 hover:z-20 transition-all"
-                    >
-                      <div
-                        className="w-8 h-8 rounded-full border-2 border-white/60 flex items-center justify-center text-sm shadow-lg transition-transform group-hover:scale-125"
-                        style={{ background: color }}
-                      >
-                        {CATEGORY_ICONS[issue.category]}
-                      </div>
-                      <div className="hidden group-hover:block absolute top-10 left-1/2 -translate-x-1/2 bg-zinc-900 border border-white/15 rounded-lg px-2 py-1 text-[10px] text-white whitespace-nowrap shadow-xl max-w-[140px] truncate">
-                        {issue.title}
-                      </div>
-                    </button>
-                  );
-                })}
-                <div className="z-10 text-center flex flex-col items-center gap-2 p-4 max-w-xs">
-                  <MapIcon className="w-10 h-10 text-violet-500/60" />
-                  <p className="text-xs text-gray-500">
-                    Interactive Google Maps loads with <code className="text-violet-400">NEXT_PUBLIC_GOOGLE_MAPS_KEY</code>
-                  </p>
-                </div>
+            {/* The real map element — always present in DOM */}
+            <div
+              ref={mapRef}
+              className="w-full h-full"
+              style={{ display: mapLoaded ? 'block' : 'none' }}
+            />
+
+            {/* Loading / placeholder shown until map engine initialises */}
+            {!mapLoaded && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#f0f4f8] gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-[#0B3D91]" />
+                <span className="text-sm font-medium text-[#1F2937]">Loading map…</span>
               </div>
             )}
 

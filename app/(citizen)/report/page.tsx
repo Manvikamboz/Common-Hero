@@ -18,6 +18,15 @@ export default function ReportPage() {
   const { location, error: locError, loading: locLoading, requestLocation } = useLocation();
 
   const [step, setStep] = useState(0);
+  const [useFallbackMap, setUseFallbackMap] = useState(false);
+
+  // Set global fallback handler
+  useEffect(() => {
+    (window as any).gm_authFailure = () => {
+      console.warn("Google Maps authentication failed. Falling back to Leaflet Map.");
+      setUseFallbackMap(true);
+    };
+  }, []);
 
   // Step 1 — Media
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -53,8 +62,17 @@ export default function ReportPage() {
       setMapPosition(newPos);
       setAddress(`Near ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
       if (mapInstanceRef.current && markerRef.current) {
-        mapInstanceRef.current.setCenter(newPos);
-        markerRef.current.setPosition(newPos);
+        if (typeof mapInstanceRef.current.setView === 'function') {
+          mapInstanceRef.current.setView([newPos.lat, newPos.lng], 16);
+          if (typeof markerRef.current.setLatLng === 'function') {
+            markerRef.current.setLatLng([newPos.lat, newPos.lng]);
+          }
+        } else if (typeof mapInstanceRef.current.setCenter === 'function') {
+          mapInstanceRef.current.setCenter(newPos);
+          if (typeof markerRef.current.setPosition === 'function') {
+            markerRef.current.setPosition(newPos);
+          }
+        }
       }
     }
   }, [location]);
@@ -64,11 +82,123 @@ export default function ReportPage() {
     requestLocation();
   }, []);
 
-  // Google Maps picker for Step 2
+  // Google Maps or Leaflet picker for Step 2
   useEffect(() => {
     if (step !== 1 || !mapRef.current) return;
+    let timeoutId: NodeJS.Timeout;
+
+    const initLeafletMap = () => {
+      if (!mapRef.current) return;
+      
+      const L = (window as any).L;
+      if (!L) return;
+
+      // Clean up previous Leaflet map if it exists
+      if (mapInstanceRef.current) {
+        if (typeof mapInstanceRef.current.remove === 'function') {
+          try {
+            mapInstanceRef.current.remove();
+          } catch (e) {
+            console.warn("Failed to remove previous Leaflet map instance:", e);
+          }
+        }
+        mapInstanceRef.current = null;
+      }
+      
+      mapRef.current.innerHTML = '';
+      
+      const pos = mapPosition || { lat: 28.6139, lng: 77.2090 };
+      const map = L.map(mapRef.current, {
+        center: [pos.lat, pos.lng],
+        zoom: 16,
+        zoomControl: true,
+        attributionControl: false
+      });
+      mapInstanceRef.current = map;
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+      
+      const marker = L.marker([pos.lat, pos.lng], {
+        draggable: true
+      }).addTo(map);
+      markerRef.current = marker;
+      
+      marker.on('dragend', () => {
+        const newLatLng = marker.getLatLng();
+        const newPos = { lat: newLatLng.lat, lng: newLatLng.lng };
+        setMapPosition(newPos);
+        
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newPos.lat}&lon=${newPos.lng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.display_name) {
+              setAddress(data.display_name);
+            } else {
+              setAddress(`Near ${newPos.lat.toFixed(4)}, ${newPos.lng.toFixed(4)}`);
+            }
+          })
+          .catch(() => {
+            setAddress(`Near ${newPos.lat.toFixed(4)}, ${newPos.lng.toFixed(4)}`);
+          });
+      });
+      
+      map.on('click', (e: any) => {
+        const newLatLng = e.latlng;
+        marker.setLatLng(newLatLng);
+        const newPos = { lat: newLatLng.lat, lng: newLatLng.lng };
+        setMapPosition(newPos);
+      });
+
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
+    };
+
+    const loadLeaflet = () => {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+      }
+      
+      if (!document.getElementById('leaflet-js')) {
+        const script = document.createElement('script');
+        script.id = 'leaflet-js';
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.crossOrigin = '';
+        script.onload = () => {
+          initLeafletMap();
+        };
+        document.head.appendChild(script);
+      } else {
+        if ((window as any).L) {
+          initLeafletMap();
+        } else {
+          const existingScript = document.getElementById('leaflet-js');
+          if (existingScript) {
+            existingScript.addEventListener('load', () => {
+              initLeafletMap();
+            });
+          }
+        }
+      }
+    };
+
+    if (useFallbackMap) {
+      loadLeaflet();
+      return;
+    }
+
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-    if (!apiKey || apiKey === 'YOUR_MAPS_KEY') return;
+    if (!apiKey || apiKey === 'YOUR_MAPS_KEY') {
+      setUseFallbackMap(true);
+      return;
+    }
 
     const initLocationMap = () => {
       if (!window.google?.maps || !mapRef.current) return;
@@ -98,7 +228,6 @@ export default function ReportPage() {
       markerRef.current.addListener('dragend', (e: any) => {
         const newPos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
         setMapPosition(newPos);
-        // Reverse geocode
         const geocoder = new window.google.maps.Geocoder();
         geocoder.geocode({ location: newPos }, (results: any, status: any) => {
           if (status === 'OK' && results[0]) {
@@ -117,13 +246,29 @@ export default function ReportPage() {
     if (window.google?.maps) {
       initLocationMap();
     } else {
+      // Set a 3-second timeout fallback to Leaflet
+      timeoutId = setTimeout(() => {
+        if (!window.google?.maps || !mapInstanceRef.current) {
+          console.warn("Google Maps failed to load within timeout on report page. Falling back to Leaflet Map.");
+          setUseFallbackMap(true);
+        }
+      }, 3000);
+
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=__initLocationMap`;
       script.async = true;
-      (window as any).__initLocationMap = initLocationMap;
+      (window as any).__initLocationMap = () => {
+        clearTimeout(timeoutId);
+        initLocationMap();
+      };
       document.head.appendChild(script);
     }
-  }, [step]);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      delete (window as any).__initLocationMap;
+    };
+  }, [step, useFallbackMap]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
