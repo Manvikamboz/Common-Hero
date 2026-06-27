@@ -145,15 +145,72 @@ export async function GET(
       userData = { id: userDoc.id, ...userDoc.data() };
     }
 
-    // 2. Fetch the user's most recent 20 reported issues
-    const issuesSnap = await adminDb
-      .collection('issues')
-      .where('reportedBy', '==', targetId)
-      .limit(100)
-      .get();
+    // 2. Fetch all issues dynamically to calculate statistics (points, reported, validated, resolved)
+    const allIssuesSnap = await adminDb.collection('issues').get();
+    let issuesReported = 0;
+    let issuesValidated = 0;
+    let computedPoints = 0;
+    let issuesResolved = 0;
 
-    const issues = issuesSnap.docs
-      .map((doc: FirebaseFirestore.QueryDocumentSnapshot) => ({ id: doc.id, ...doc.data() }))
+    allIssuesSnap.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+      const data = doc.data() || {};
+      if (data.reportedBy === targetId) {
+        issuesReported++;
+        computedPoints += 10; // 10 points per report
+        if (data.status === 'resolved') {
+          issuesResolved++;
+        }
+      }
+      const validations = data.validations || [];
+      const vIdx = validations.findIndex((v: any) => v.validatorId === targetId);
+      if (vIdx !== -1) {
+        issuesValidated++;
+        if (vIdx === 0) {
+          computedPoints += 15; // First validator bonus
+        } else {
+          computedPoints += 5; // Standard validation
+        }
+      }
+    });
+
+    // Override hardcoded/stale database stats dynamically
+    userData.points = computedPoints;
+    userData.issuesReported = issuesReported;
+    userData.issuesValidated = issuesValidated;
+    userData.issuesResolved = issuesResolved;
+
+    // Dynamically award badges based on actual contributions
+    const dynamicBadges = [];
+    if (issuesReported >= 1) {
+      dynamicBadges.push({
+        id: 'first_report',
+        name: 'First Reporter',
+        description: 'Submitted first validated report',
+        awardedAt: '2026-01-15T08:00:00Z'
+      });
+    }
+    if (issuesValidated >= 10) {
+      dynamicBadges.push({
+        id: 'neighborhood_watch',
+        name: 'Neighborhood Watch',
+        description: '10 validated reports',
+        awardedAt: '2026-03-20T08:00:00Z'
+      });
+    }
+    if (issuesValidated >= 25) {
+      dynamicBadges.push({
+        id: 'validator_pro',
+        name: 'Validator Pro',
+        description: 'Validate 25+ issues',
+        awardedAt: '2026-03-20T08:00:00Z'
+      });
+    }
+    userData.badges = dynamicBadges;
+
+    // 3. Filter user's reported issues
+    const issues = allIssuesSnap.docs
+      .map((doc: FirebaseFirestore.QueryDocumentSnapshot) => ({ id: doc.id, ...doc.data() as any }))
+      .filter((issue: any) => issue.reportedBy === targetId)
       .sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''))
       .slice(0, 20);
 
