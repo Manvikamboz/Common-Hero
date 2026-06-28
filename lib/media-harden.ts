@@ -35,6 +35,16 @@ export function validateMagicBytes(buffer: Buffer): { isValid: boolean; mime: st
   if (hex === '47494638') {
     return { isValid: true, mime: 'image/gif' };
   }
+  
+  // MP4: index 4 has 'ftyp' (66747970)
+  if (buffer.length >= 8 && buffer.toString('hex', 4, 8).toUpperCase() === '66747970') {
+    return { isValid: true, mime: 'video/mp4' };
+  }
+  
+  // WebM: starts with 1A45DFA3
+  if (hex === '1A45DFA3') {
+    return { isValid: true, mime: 'video/webm' };
+  }
 
   return { isValid: false, mime: 'unknown' };
 }
@@ -106,7 +116,7 @@ export function hardenUploadedFile(
   // 2. Magic bytes validation
   const validation = validateMagicBytes(buffer);
   if (!validation.isValid) {
-    return { success: false, error: 'Invalid file format. Only JPEG, PNG, and WebP are allowed.', hardenedBuffer: buffer, mimeType: 'unknown' };
+    return { success: false, error: 'Invalid file format. Only images (JPEG, PNG, WebP) and videos (MP4, WebM) are allowed.', hardenedBuffer: buffer, mimeType: 'unknown' };
   }
 
   // 3. EXIF stripping for JPEGs

@@ -173,36 +173,38 @@ export async function GET(
       }
     });
 
-    // Override hardcoded/stale database stats dynamically
-    userData.points = computedPoints;
-    userData.issuesReported = issuesReported;
-    userData.issuesValidated = issuesValidated;
-    userData.issuesResolved = issuesResolved;
+    // Use stored values as primary, fallback to dynamically calculated stats if they do not exist
+    userData.points = userData.points !== undefined ? userData.points : computedPoints;
+    userData.issuesReported = userData.issuesReported !== undefined ? userData.issuesReported : issuesReported;
+    userData.issuesValidated = userData.issuesValidated !== undefined ? userData.issuesValidated : issuesValidated;
+    userData.issuesResolved = userData.issuesResolved !== undefined ? userData.issuesResolved : issuesResolved;
 
-    // Dynamically award badges based on actual contributions
-    const dynamicBadges = [];
-    if (issuesReported >= 1) {
+    // Award badges dynamically while keeping existing ones
+    const dynamicBadges = [...(userData.badges || [])];
+    const badgeIds = new Set(dynamicBadges.map((b: any) => b.id));
+
+    if (issuesReported >= 1 && !badgeIds.has('first_report')) {
       dynamicBadges.push({
         id: 'first_report',
         name: 'First Reporter',
         description: 'Submitted first validated report',
-        awardedAt: '2026-01-15T08:00:00Z'
+        awardedAt: new Date().toISOString()
       });
     }
-    if (issuesValidated >= 10) {
+    if (issuesValidated >= 10 && !badgeIds.has('neighborhood_watch')) {
       dynamicBadges.push({
         id: 'neighborhood_watch',
         name: 'Neighborhood Watch',
         description: '10 validated reports',
-        awardedAt: '2026-03-20T08:00:00Z'
+        awardedAt: new Date().toISOString()
       });
     }
-    if (issuesValidated >= 25) {
+    if (issuesValidated >= 25 && !badgeIds.has('validator_pro')) {
       dynamicBadges.push({
         id: 'validator_pro',
         name: 'Validator Pro',
         description: 'Validate 25+ issues',
-        awardedAt: '2026-03-20T08:00:00Z'
+        awardedAt: new Date().toISOString()
       });
     }
     userData.badges = dynamicBadges;
@@ -247,25 +249,38 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, age, gender, dob, email, photoUrl, town, state, district } = body;
+    const { name, email, dob, gender, address, town, state, district, phone, photoUrl } = body;
 
     // Basic validation
-    if (!name || age === undefined || !gender || !dob || !email || !town || !state || !district) {
+    if (!name || !email || !dob || !gender || !address || !town || !state || !district || !phone) {
       return NextResponse.json({ success: false, error: 'Missing required profile fields' }, { status: 400 });
     }
 
     const { adminDb } = await getAdminServices();
 
+    // Calculate age from dob
+    let calculatedAge = 0;
+    if (dob) {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+    }
+
     const updateData: any = {
       name,
-      age: Number(age),
-      gender,
-      dob,
       email,
+      dob,
+      gender,
+      age: calculatedAge,
+      address,
       town,
       state,
       district,
-      address: [town, district, state].filter(Boolean).join(', '),
+      phone,
     };
 
     if (photoUrl) {

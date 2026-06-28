@@ -197,7 +197,8 @@ export async function POST(request: NextRequest) {
       imageMime = fileHardenResult.mimeType;
 
       // Upload to actual Firebase Storage using admin SDK with base64 fallback
-      const filename = `issues/${Date.now()}_report.webp`;
+      const extension = imageMime.startsWith('video/') ? (imageMime.includes('webm') ? 'webm' : 'mp4') : 'webp';
+      const filename = `issues/${Date.now()}_report.${extension}`;
       try {
         const publicUrl = await uploadToStorage(imageBuffer, imageMime, filename);
         mediaUrls.push(publicUrl);

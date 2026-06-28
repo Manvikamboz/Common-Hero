@@ -18,10 +18,12 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function TrackPage() {
   const { user, getAuthToken } = useAuth();
   const [viewMode, setViewMode] = useState<'map' | 'list'>('list');
+  const { t } = useLanguage();
   
   // Filter states
   const [selectedStatus, setSelectedStatus] = useState<string>('');
@@ -78,8 +80,8 @@ export default function TrackPage() {
       {/* Header and Toggle Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Civic Tracking Center</h1>
-          <p className="text-sm text-gray-400">View reported tickets in your ward. Upvote to validate.</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">{t('trackTitle')}</h1>
+          <p className="text-sm text-gray-400">{t('trackSub')}</p>
         </div>
 
         <div className="flex items-center gap-2 bg-zinc-900 border border-white/10 p-1 rounded-xl w-fit">
@@ -93,7 +95,7 @@ export default function TrackPage() {
             )}
           >
             <ListIcon className="w-3.5 h-3.5" />
-            List View
+            {t('listView')}
           </button>
           <button 
             onClick={() => setViewMode('map')}
@@ -105,7 +107,7 @@ export default function TrackPage() {
             )}
           >
             <MapIcon className="w-3.5 h-3.5" />
-            Interactive Map
+            {t('interactiveMap')}
           </button>
         </div>
       </div>
@@ -114,7 +116,7 @@ export default function TrackPage() {
       <div className="glass-card p-4 flex flex-wrap items-center gap-4 border-white/5">
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
           <Filter className="w-4 h-4 text-violet-400" />
-          Filter:
+          {t('filterLabel')}
         </div>
 
         {/* Category Filter */}
@@ -123,7 +125,7 @@ export default function TrackPage() {
           onChange={(e) => setSelectedCategory(e.target.value)}
           className="bg-zinc-900/60 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
         >
-          <option value="">All Categories</option>
+          <option value="">{t('allCategories')}</option>
           {categories.map((c) => (
             <option key={c} value={c}>{c.toUpperCase()}</option>
           ))}
@@ -135,7 +137,7 @@ export default function TrackPage() {
           onChange={(e) => setSelectedStatus(e.target.value)}
           className="bg-zinc-900/60 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
         >
-          <option value="">All Statuses</option>
+          <option value="">{t('allStatuses')}</option>
           {statuses.map((s) => (
             <option key={s} value={s}>{s.toUpperCase()}</option>
           ))}
@@ -150,7 +152,7 @@ export default function TrackPage() {
             }}
             className="text-xs text-violet-400 hover:underline"
           >
-            Clear Filters
+            {t('clearFilters')}
           </button>
         )}
       </div>
@@ -159,7 +161,7 @@ export default function TrackPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
-          <span>Synchronizing live incidents data...</span>
+          <span>{t('syncLive')}</span>
         </div>
       ) : error ? (
         <div className="p-6 text-center text-red-400 bg-red-950/10 border border-red-500/20 rounded-xl">
@@ -167,7 +169,7 @@ export default function TrackPage() {
         </div>
       ) : issues.length === 0 ? (
         <div className="p-12 text-center text-gray-500 bg-zinc-900/20 border border-white/5 rounded-xl">
-          No matching civic tickets found.
+                    {t('noTickets')}
         </div>
       ) : viewMode === 'list' ? (
         // List View of Issues
@@ -212,7 +214,7 @@ export default function TrackPage() {
               {/* AI summary snippet */}
               {issue.aiMetadata?.autoSummary && (
                 <div className="bg-zinc-950/60 border border-white/5 rounded-lg p-2.5 text-[11px] text-gray-300 font-medium">
-                  <span className="font-bold text-violet-400">AI Summary:</span> {issue.aiMetadata.autoSummary}
+                  <span className="font-bold text-violet-400">{t('aiSummary')}</span> {issue.aiMetadata.autoSummary}
                 </div>
               )}
 
@@ -239,7 +241,7 @@ export default function TrackPage() {
                     ) : (
                       <ThumbsUp className="w-3.5 h-3.5" />
                     )}
-                    <span>{issue.upvotes || 0} Upvote</span>
+                    <span>{issue.upvotes || 0} {t('upvote')}</span>
                   </button>
 
                   {/* Validator specific quick invalidation */}
@@ -248,7 +250,7 @@ export default function TrackPage() {
                       onClick={() => handleValidate(issue.id, 'invalid')}
                       className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 px-2 py-1.5 rounded-lg text-xs font-bold"
                     >
-                      Flag Spam
+                      {t('flagSpam')}
                     </button>
                   )}
                 </div>

@@ -23,13 +23,35 @@ import { cn } from '@/lib/utils';
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, getAuthToken } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [mounted, setMounted] = React.useState(false);
+  const [dbUser, setDbUser] = React.useState<any>(null);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  React.useEffect(() => {
+    if (!user) return;
+    const fetchUser = async () => {
+      try {
+        const token = await getAuthToken();
+        const res = await fetch(`/api/users/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setDbUser(data.user);
+          }
+        }
+      } catch (err) {
+        console.error('Navbar profile fetch failed:', err);
+      }
+    };
+    fetchUser();
+  }, [user, getAuthToken]);
 
   const defaultItems = [
     { name: t('home'), href: '/', icon: Home },
@@ -79,7 +101,7 @@ export default function Navigation() {
       .substring(0, 2);
   };
 
-  const showUser = mounted ? user : null;
+  const showUser = mounted ? (dbUser || user) : null;
 
   return (
     <>
@@ -189,7 +211,7 @@ export default function Navigation() {
               {/* Profile link */}
               <Link
                 href="/profile"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-violet-500/5 transition-colors group"
+                className="flex items-center gap-2 px-1 py-1 rounded-lg hover:bg-violet-500/5 transition-colors group"
                 title="My Profile"
               >
                 {showUser.photoUrl ? (
@@ -205,7 +227,6 @@ export default function Navigation() {
                     {getUserInitials(showUser.name)}
                   </div>
                 )}
-                <UserCircle className="w-3.5 h-3.5 text-gray-500 group-hover:text-violet-600 transition-colors" />
               </Link>
 
               <button
@@ -258,7 +279,23 @@ export default function Navigation() {
             pathname === '/profile' ? 'text-violet-600 font-semibold' : 'text-gray-500 hover:text-violet-600'
           )}
         >
-          <UserCircle className="w-5 h-5" />
+          {showUser ? (
+            showUser.photoUrl ? (
+              <Image
+                src={showUser.photoUrl}
+                alt={showUser.name}
+                width={20}
+                height={20}
+                className="w-5 h-5 rounded-full border border-violet-500/30 object-cover shadow-sm"
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center font-bold text-[8px] text-white border border-violet-500/30 shadow-sm">
+                {getUserInitials(showUser.name)}
+              </div>
+            )
+          ) : (
+            <UserCircle className="w-5 h-5" />
+          )}
           <span className="text-[10px] mt-1 font-medium tracking-tight">{showUser ? 'Profile' : 'Login'}</span>
         </Link>
       </nav>

@@ -8,6 +8,7 @@ import { auth } from '@/lib/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { ShieldCheck, LogIn, Phone, KeyRound, Sparkles, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 declare global {
   interface Window {
@@ -18,6 +19,7 @@ declare global {
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading, signInWithGoogle, signInWithDemo } = useAuth();
+  const { t } = useLanguage();
   
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -276,7 +278,7 @@ export default function LoginPage() {
       <div className="flex min-h-[70vh] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
-          <p className="text-gray-400 text-sm">Authenticating session...</p>
+          <p className="text-gray-400 text-sm">{t('authenticating')}</p>
         </div>
       </div>
     );
@@ -299,9 +301,9 @@ export default function LoginPage() {
             height={48}
             className="w-12 h-12 object-contain rounded-xl"
           />
-          <h2 className="text-2xl font-bold tracking-tight text-white">Welcome to CommunityHero</h2>
-          <p className="text-xs text-gray-400 max-w-xs">
-            Report local issues, validation tickets, and earn civic contribution points.
+          <h2 className="text-2xl font-bold tracking-tight text-white">{t('loginWelcome')}</h2>
+          <p className="text-xs text-gray-200 max-w-xs">
+            {t('loginSub')}
           </p>
         </div>
 
@@ -333,7 +335,7 @@ export default function LoginPage() {
               )}
             >
               <Phone className="w-3.5 h-3.5" />
-              Phone Number
+              {t('loginPhoneTab')}
             </button>
             <button
               type="button"
@@ -346,7 +348,7 @@ export default function LoginPage() {
               )}
             >
               <Mail className="w-3.5 h-3.5" />
-              Email Address
+              {t('loginEmailTab')}
             </button>
           </div>
         )}
@@ -356,8 +358,8 @@ export default function LoginPage() {
           <form onSubmit={handleSendOtp} className="space-y-4">
             {authMethod === 'phone' ? (
               <div className="space-y-2">
-                <label htmlFor="phone" className="text-xs font-semibold text-gray-300">
-                  Phone Number
+                <label htmlFor="phone" className="text-xs font-semibold text-gray-100">
+                  {t('loginPhoneLabel')}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -371,14 +373,14 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-gray-300">
                   Format: International code prefix (+91 for India, +1 for US) followed by 10-digit number.
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="email" className="text-xs font-semibold text-gray-300">
-                  Email Address
+                <label htmlFor="email" className="text-xs font-semibold text-gray-100">
+                  {t('loginEmailLabel')}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -392,7 +394,7 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-gray-300">
                   Enter your email address to receive a 6-digit login OTP code.
                 </p>
               </div>
@@ -408,7 +410,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  Send Verification OTP
+                  {t('sendOtp')}
                 </>
               )}
             </button>
@@ -416,8 +418,8 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="otp" className="text-xs font-semibold text-gray-300">
-                6-Digit Verification Code
+              <label htmlFor="otp" className="text-xs font-semibold text-gray-100">
+                {t('otpLabel')}
               </label>
               <div className="relative">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -450,7 +452,7 @@ export default function LoginPage() {
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                 ) : (
-                  'Verify Code'
+                  t('verifyCode')
                 )}
               </button>
             </div>
@@ -463,7 +465,7 @@ export default function LoginPage() {
             <div className="w-full border-t border-white/10"></div>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-zinc-900/60 px-2 text-gray-500">Or continue with</span>
+            <span className="bg-zinc-900/60 px-2 text-gray-300">{t('orContinueWith')}</span>
           </div>
         </div>
 
@@ -472,7 +474,7 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleSignIn}
             type="button"
-            className="w-full flex items-center justify-center gap-3 py-2.5 bg-zinc-950 hover:bg-zinc-900 border border-white/10 text-gray-300 hover:text-white font-medium rounded-lg text-sm transition-all duration-200"
+            className="w-full flex items-center justify-center gap-3 py-2.5 bg-zinc-950 hover:bg-zinc-900 border border-white/10 text-gray-100 hover:text-white font-medium rounded-lg text-sm transition-all duration-200"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -492,7 +494,7 @@ export default function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            Google Authentication
+            {t('googleAuth')}
           </button>
 
           <button
@@ -501,7 +503,7 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 hover:text-white font-medium rounded-lg text-sm transition-all duration-200"
           >
             <Sparkles className="w-4 h-4 text-violet-400" />
-            Bypass with Demo Account
+            {t('bypassDemo')}
           </button>
         </div>
 

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import type { User } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 const BADGE_DEFINITIONS = [
   { id: 'first_report', name: 'First Reporter', description: 'Submit your first validated civic report', icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
@@ -24,6 +25,7 @@ const BADGE_DEFINITIONS = [
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [leaders, setLeaders] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,29 +57,29 @@ export default function LeaderboardPage() {
   const currentUserRank = user ? leaders.findIndex((u) => u.id === user.id) + 1 : 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 py-4">
+    <div className="max-w-4xl mx-auto flex flex-col gap-6 py-4">
       {/* Leaderboard Main Column */}
-      <div className="lg:col-span-2 flex flex-col gap-6 text-left">
+      <div className="w-full flex flex-col gap-6 text-left">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
             <Trophy className="w-8 h-8 text-amber-400" />
-            Community Leaderboard
+            {t('leaderboardTitle')}
           </h1>
-          <p className="text-sm text-gray-400 mt-1">Top civic contributors ranked by points.</p>
+          <p className="text-sm text-gray-400 mt-1">{t('leaderboardSub')}</p>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
             <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
-            <span className="text-sm">Loading leaderboard...</span>
+            <span className="text-sm">{t('loadingLeaderboard')}</span>
           </div>
         ) : error ? (
           <div className="p-6 text-center text-red-400 bg-red-950/10 border border-red-500/20 rounded-xl">{error}</div>
         ) : leaders.length === 0 ? (
           <div className="glass-card p-12 flex flex-col items-center gap-4 text-center border-white/5">
             <Trophy className="w-10 h-10 text-amber-400/40" />
-            <p className="font-bold text-white">No contributors yet</p>
-            <p className="text-sm text-gray-400">Be the first to report a civic issue and earn points!</p>
+            <p className="font-bold text-white">{t('noContributors')}</p>
+            <p className="text-sm text-gray-400">{t('noContributorsSub')}</p>
           </div>
         ) : (
           <>
@@ -141,9 +143,9 @@ export default function LeaderboardPage() {
                           {entry.name} {isYou && <span className="text-[9px] bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded-full ml-1">YOU</span>}
                         </h3>
                         <p className="text-[11px] text-gray-500 flex items-center gap-2 mt-0.5">
-                          <span>{entry.issuesReported ?? 0} reports</span>
+                          <span>{entry.issuesReported ?? 0} {t('reports')}</span>
                           <span>·</span>
-                          <span>{entry.issuesValidated ?? 0} validations</span>
+                          <span>{entry.issuesValidated ?? 0} {t('validations')}</span>
                           {entry.wardId && <><span>·</span><span className="text-gray-600">{entry.wardId.replace('_', ' ')}</span></>}
                         </p>
                       </div>
@@ -164,80 +166,6 @@ export default function LeaderboardPage() {
             </div>
           </>
         )}
-      </div>
-
-      {/* Achievements Sidebar */}
-      <div className="flex flex-col gap-6 text-left">
-        <div>
-          <h2 className="text-2xl font-extrabold text-white">Your Achievements</h2>
-          <p className="text-sm text-gray-400 mt-1">Unlock badges to increase your verification weight.</p>
-        </div>
-
-        {/* User Profile Card */}
-        {user ? (
-          <div className="glass-card p-6 flex flex-col gap-4 border-violet-500/15">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center font-bold text-white text-xl shadow-lg">
-                {getInitials(user.name)}
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-base">{user.name}</h3>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-wider font-mono">
-                  {user.role} {user.wardId ? `· ${user.wardId.replace('_', ' ')}` : ''}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 border-t border-white/5 pt-4">
-              {[
-                { label: 'Points', value: user.points, color: 'text-amber-400' },
-                { label: 'Reports', value: user.issuesReported, color: 'text-violet-400' },
-                { label: 'Validated', value: user.issuesValidated, color: 'text-emerald-400' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="text-center">
-                  <p className={cn('text-xl font-extrabold', color)}>{value ?? 0}</p>
-                  <p className="text-[10px] text-gray-500 font-medium">{label}</p>
-                </div>
-              ))}
-            </div>
-
-            {currentUserRank > 0 && (
-              <div className="text-center text-xs text-gray-500">
-                Your rank: <span className="text-violet-400 font-bold">#{currentUserRank}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="glass-card p-6 text-center text-gray-500 border-white/5">
-            <p className="text-sm">Sign in to see your achievements</p>
-          </div>
-        )}
-
-        {/* Badge Grid */}
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-bold text-white">All Badges</h3>
-          {BADGE_DEFINITIONS.map((badge) => {
-            const unlocked = userBadgeIds.has(badge.id);
-            return (
-              <div
-                key={badge.id}
-                className={cn(
-                  'glass-card p-4 flex items-center gap-4 border-white/5 transition-all',
-                  unlocked ? 'opacity-100' : 'opacity-40 grayscale'
-                )}
-              >
-                <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center border shrink-0', badge.bg, badge.border)}>
-                  <badge.icon className={cn('w-5 h-5', badge.color)} />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-bold text-sm text-white">{badge.name}</h4>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{badge.description}</p>
-                </div>
-                {unlocked && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 ml-auto" />}
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

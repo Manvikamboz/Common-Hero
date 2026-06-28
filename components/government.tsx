@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { 
   AlertTriangle, 
@@ -22,30 +22,149 @@ import { cn } from '@/lib/utils';
 // ==========================================
 // 1. EMERGENCY ANNOUNCEMENTS BANNER
 // ==========================================
+interface EmergencyHazard {
+  id: string;
+  title: string;
+  category: string;
+  severity: string;
+  location: {
+    address: string;
+  };
+}
+
 export function EmergencyBanner() {
   const { t } = useLanguage();
   const [dismissed, setDismissed] = useState(false);
+  const [hasEmergency, setHasEmergency] = useState(false);
+  const [weatherWarning, setWeatherWarning] = useState<string | null>(null);
+  const [hazards, setHazards] = useState<EmergencyHazard[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (dismissed) return null;
+  useEffect(() => {
+    const fetchEmergencyData = async (lat: number, lng: number) => {
+      try {
+        // 1. Fetch weather warning
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=weather_code,wind_speed_10m,precipitation`;
+        const weatherRes = await fetch(weatherUrl);
+        let weatherCode = 0;
+        let windSpeed = 0;
+        let precipitation = 0;
+        let warningText = "";
+
+        if (weatherRes.ok) {
+          const weatherData = await weatherRes.json();
+          const current = weatherData.current;
+          weatherCode = current?.weather_code || 0;
+          windSpeed = current?.wind_speed_10m || 0;
+          precipitation = current?.precipitation || 0;
+        }
+
+        // Map weather code to emergency alerts
+        if (weatherCode >= 95) {
+          warningText = "Severe Thunderstorm Warning: Threat of lightning and heavy winds. Seek shelter.";
+        } else if (weatherCode >= 80) {
+          warningText = "Heavy Rain Showers Alert: Low visibility and potential flash flooding.";
+        } else if (weatherCode >= 61) {
+          warningText = "Heavy Rainfall Advisory: Waterlogging expected on major streets.";
+        } else if (weatherCode >= 51) {
+          warningText = "Light Rain / Drizzle Alert: Roadways may be slick and slippery.";
+        } else if (windSpeed > 20) {
+          warningText = "High Wind Warning: Expect minor structural damage and falling branches.";
+        }
+
+        // 2. Fetch active hazard reports (potholes, electric wires, construction areas)
+        const issuesRes = await fetch('/api/issues');
+        let emergencyHazards: EmergencyHazard[] = [];
+        if (issuesRes.ok) {
+          const issuesData = await issuesRes.json();
+          if (issuesData.success && Array.isArray(issuesData.issues)) {
+            emergencyHazards = issuesData.issues.filter((issue: any) => {
+              if (issue.status === 'resolved' || issue.status === 'archived') return false;
+
+              const title = issue.title.toLowerCase();
+              const desc = issue.description.toLowerCase();
+              const cat = issue.category.toLowerCase();
+
+              const isWire = title.includes('wire') || title.includes('electric') || title.includes('cable') || title.includes('short circuit') || desc.includes('wire') || desc.includes('electric') || desc.includes('cable');
+              const isPothole = cat === 'pothole' || title.includes('pothole') || desc.includes('pothole');
+              const isConstruction = title.includes('construction') || title.includes('digging') || title.includes('road work') || title.includes('excavation') || desc.includes('construction') || desc.includes('digging') || desc.includes('road work');
+
+              return isWire || isPothole || isConstruction;
+            });
+          }
+        }
+
+        // Determine if emergency is active (weather hazard OR active severe civic hazards exist)
+        const activeEmergency = !!warningText || emergencyHazards.some(h => h.severity === 'critical' || h.severity === 'high');
+        
+        setWeatherWarning(warningText || (emergencyHazards.length > 0 ? "Civic Hazard Warning: High-risk areas detected in your vicinity." : null));
+        setHazards(emergencyHazards);
+        setHasEmergency(activeEmergency);
+      } catch (err) {
+        console.error('Failed to load emergency data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchEmergencyData(pos.coords.latitude, pos.coords.longitude),
+        () => fetchEmergencyData(28.6139, 77.2090)
+      );
+    } else {
+      fetchEmergencyData(28.6139, 77.2090);
+    }
+  }, []);
+
+  if (dismissed || loading || !hasEmergency) return null;
 
   return (
-    <div className="w-full bg-red-600 text-white py-3 px-4 shadow-md flex items-center justify-between gap-3 text-xs md:text-sm font-medium z-40 relative md:rounded-lg md:mb-6 animate-fade-in">
-      <div className="flex items-center gap-2 flex-1">
-        <AlertTriangle className="w-5 h-5 animate-pulse shrink-0" />
-        <span className="font-bold tracking-wider bg-red-800 px-2 py-0.5 rounded text-[10px] shrink-0">
-          {t('emergencyActive')}
-        </span>
-        <p className="line-clamp-2 md:line-clamp-1">
-          {t('emergencyAlertStorm')}
-        </p>
+    <div className="w-full bg-gradient-to-r from-red-700 to-rose-600 text-white p-4 shadow-xl z-40 relative md:rounded-xl md:mb-6 animate-fade-in border border-red-500/20">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 flex-1">
+          <div className="bg-red-900/60 p-2 rounded-lg shrink-0 mt-0.5 animate-pulse">
+            <AlertTriangle className="w-6 h-6 text-yellow-300" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold tracking-wider bg-red-950/80 px-2.5 py-0.5 rounded text-[10px] uppercase border border-red-800">
+                {t('emergencyActive') || 'EMERGENCY ACTIVE'}
+              </span>
+            </div>
+            <p className="text-sm font-semibold mt-1.5 leading-snug">
+              {weatherWarning}
+            </p>
+
+            {/* List Hazard locations */}
+            {hazards.length > 0 && (
+              <div className="mt-3 bg-red-950/40 border border-red-800/40 rounded-lg p-3">
+                <span className="text-[11px] font-extrabold text-yellow-300 uppercase tracking-wider">
+                  ⚠️ High-Risk Incident Zones (Avoid/Exercise Caution):
+                </span>
+                <ul className="mt-2 space-y-1.5">
+                  {hazards.slice(0, 4).map((hazard) => (
+                    <li key={hazard.id} className="text-xs flex items-start gap-1.5 text-red-100 font-medium">
+                      <span className="text-yellow-400 mt-0.5 shrink-0">📍</span>
+                      <div>
+                        <span className="font-bold text-white capitalize">{hazard.category}:</span>{' '}
+                        {hazard.title} — <span className="text-red-200 italic">{hazard.location.address}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+        <button 
+          onClick={() => setDismissed(true)} 
+          className="p-1 hover:bg-white/10 rounded-lg transition-colors shrink-0"
+          aria-label="Dismiss Alert"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
-      <button 
-        onClick={() => setDismissed(true)} 
-        className="p-1 hover:bg-white/10 rounded transition-colors"
-        aria-label="Dismiss Alert"
-      >
-        <X className="w-4 h-4" />
-      </button>
     </div>
   );
 }

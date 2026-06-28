@@ -11,6 +11,7 @@ import {
   FileText, BarChart3, User, Edit, Sparkles, X, ChevronRight, ChevronLeft, UserCheck, Calendar, Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Badge {
@@ -52,6 +53,7 @@ interface ProfileData {
     state?: string;
     district?: string;
     address?: string;
+    phone?: string;
   };
   issues: IssueItem[];
 }
@@ -131,6 +133,7 @@ function getAvatarPath(age: number, gender: string): string {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading: authLoading, getAuthToken } = useAuth();
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,13 +143,15 @@ export default function ProfilePage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [formName, setFormName] = useState('');
-  const [formAge, setFormAge] = useState('');
-  const [formGender, setFormGender] = useState('');
-  const [formDob, setFormDob] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formDob, setFormDob] = useState('');
+  const [formGender, setFormGender] = useState('');
+  const [formAddress, setFormAddress] = useState('');
   const [formTown, setFormTown] = useState('');
   const [formStateVal, setFormStateVal] = useState('');
   const [formDistrict, setFormDistrict] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formPhotoUrl, setFormPhotoUrl] = useState('');
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [submittingOnboarding, setSubmittingOnboarding] = useState(false);
 
@@ -187,32 +192,17 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile) {
       setFormName(profile.user.name || '');
-      setFormAge(profile.user.age?.toString() || '');
-      setFormGender(profile.user.gender || '');
-      setFormDob(profile.user.dob || '');
       setFormEmail(profile.user.email || '');
+      setFormDob(profile.user.dob || '');
+      setFormGender(profile.user.gender || '');
+      setFormAddress(profile.user.address || '');
       setFormTown(profile.user.town || '');
       setFormStateVal(profile.user.state || '');
       setFormDistrict(profile.user.district || '');
+      setFormPhone(profile.user.phone || '');
+      setFormPhotoUrl(profile.user.photoUrl || '');
     }
   }, [profile]);
-
-  const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const dobVal = e.target.value;
-    setFormDob(dobVal);
-    if (dobVal) {
-      const birthDate = new Date(dobVal);
-      const today = new Date();
-      let computedAge = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        computedAge--;
-      }
-      if (computedAge >= 0) {
-        setFormAge(computedAge.toString());
-      }
-    }
-  };
 
   const handleNextStep = () => {
     setOnboardingError(null);
@@ -220,34 +210,32 @@ export default function ProfilePage() {
       setOnboardingError('Name is required.');
       return;
     }
-    if (currentStep === 2) {
-      if (!formAge || Number(formAge) <= 0 || Number(formAge) > 120) {
-        setOnboardingError('Please enter a valid age (1-120).');
-        return;
-      }
-    }
-    if (currentStep === 3 && !formGender) {
-      setOnboardingError('Please select your gender.');
-      return;
-    }
-    if (currentStep === 4 && !formDob) {
-      setOnboardingError('Please enter your Date of Birth.');
-      return;
-    }
-    if (currentStep === 5 && (!formEmail.trim() || !formEmail.includes('@'))) {
+    if (currentStep === 2 && (!formEmail.trim() || !formEmail.includes('@'))) {
       setOnboardingError('Please enter a valid email address.');
       return;
     }
+    if (currentStep === 3 && !formDob) {
+      setOnboardingError('Please enter your Date of Birth.');
+      return;
+    }
+    if (currentStep === 4 && !formGender) {
+      setOnboardingError('Please select your gender.');
+      return;
+    }
+    if (currentStep === 5 && !formAddress.trim()) {
+      setOnboardingError('Please enter your residential address.');
+      return;
+    }
     if (currentStep === 6 && !formTown.trim()) {
-      setOnboardingError('Please enter your Town/Village/City.');
+      setOnboardingError('Please enter your ward, village or locality.');
       return;
     }
-    if (currentStep === 7 && !formStateVal.trim()) {
-      setOnboardingError('Please enter your State.');
+    if (currentStep === 7 && (!formStateVal.trim() || !formDistrict.trim())) {
+      setOnboardingError('Please enter both State and District.');
       return;
     }
-    if (currentStep === 8 && !formDistrict.trim()) {
-      setOnboardingError('Please enter your District.');
+    if (currentStep === 8 && (!formPhone.trim() || formPhone.trim().length < 8)) {
+      setOnboardingError('Please enter a valid contact number.');
       return;
     }
     setCurrentStep((prev) => prev + 1);
@@ -260,16 +248,36 @@ export default function ProfilePage() {
 
   const handleOnboardingSubmit = async () => {
     setOnboardingError(null);
+    if (!formName.trim()) {
+      setOnboardingError('Name is required.');
+      return;
+    }
+    if (!formEmail.trim() || !formEmail.includes('@')) {
+      setOnboardingError('Please enter a valid email address.');
+      return;
+    }
+    if (!formDob) {
+      setOnboardingError('Please enter your Date of Birth.');
+      return;
+    }
+    if (!formGender) {
+      setOnboardingError('Please select your gender.');
+      return;
+    }
+    if (!formAddress.trim()) {
+      setOnboardingError('Please enter your residential address.');
+      return;
+    }
     if (!formTown.trim()) {
-      setOnboardingError('Please enter your Town/Village/City.');
+      setOnboardingError('Please enter your ward, village or locality.');
       return;
     }
-    if (!formStateVal.trim()) {
-      setOnboardingError('Please enter your State.');
+    if (!formStateVal.trim() || !formDistrict.trim()) {
+      setOnboardingError('Please enter both State and District.');
       return;
     }
-    if (!formDistrict.trim()) {
-      setOnboardingError('Please enter your District.');
+    if (!formPhone.trim() || formPhone.trim().length < 8) {
+      setOnboardingError('Please enter a valid contact number.');
       return;
     }
 
@@ -278,8 +286,19 @@ export default function ProfilePage() {
       const token = await getAuthToken();
       if (!user) return;
 
-      const finalAge = Number(formAge);
-      const avatarPath = getAvatarPath(finalAge, formGender);
+      // Calculate age from dob
+      let calculatedAge = 0;
+      if (formDob) {
+        const birthDate = new Date(formDob);
+        const today = new Date();
+        calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+      }
+
+      const avatarPath = formPhotoUrl || getAvatarPath(calculatedAge, formGender);
 
       const res = await fetch(`/api/users/${user.id}`, {
         method: 'PUT',
@@ -289,14 +308,16 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           name: formName,
-          age: finalAge,
-          gender: formGender,
-          dob: formDob,
           email: formEmail,
-          photoUrl: avatarPath,
+          dob: formDob,
+          gender: formGender,
+          age: calculatedAge,
+          address: formAddress,
           town: formTown,
           state: formStateVal,
           district: formDistrict,
+          phone: formPhone,
+          photoUrl: avatarPath,
         })
       });
 
@@ -324,7 +345,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 text-violet-400 animate-spin" />
-        <p className="text-gray-400 text-sm">Loading your profile...</p>
+        <p className="text-gray-400 text-sm">{t('loadingProfile')}</p>
       </div>
     );
   }
@@ -334,7 +355,7 @@ export default function ProfilePage() {
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center">
         <p className="text-red-400 font-semibold">{error}</p>
         <button onClick={() => window.location.reload()} className="px-4 py-2 bg-zinc-800 rounded-lg text-sm text-white hover:bg-zinc-700 transition-colors">
-          Retry
+          {t('retry')}
         </button>
       </div>
     );
@@ -346,7 +367,7 @@ export default function ProfilePage() {
   const resolvedCount = issues.filter((i) => i.status === 'resolved').length;
   const openCount = issues.filter((i) => ['open', 'validated', 'in_progress'].includes(i.status)).length;
 
-  const isProfileIncomplete = !profileUser.age || !profileUser.gender || !profileUser.dob || !profileUser.town || !profileUser.state || !profileUser.district;
+  const isProfileIncomplete = !profileUser.name || !profileUser.email || !profileUser.dob || !profileUser.gender || !profileUser.address || !profileUser.town || !profileUser.state || !profileUser.district || !profileUser.phone;
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-8 py-6">
@@ -359,8 +380,8 @@ export default function ProfilePage() {
               <Sparkles className="w-5 h-5" />
             </div>
             <div className="text-center sm:text-left">
-              <h4 className="font-bold text-white text-sm">Complete Your Profile Onboarding</h4>
-              <p className="text-xs text-gray-400 mt-0.5">Provide your age, gender, DOB, and address details to complete your setup!</p>
+              <h4 className="font-bold text-white text-sm">{t('completeOnboarding')}</h4>
+              <p className="text-xs text-gray-400 mt-0.5">{t('completeOnboardingSub')}</p>
             </div>
           </div>
           <button
@@ -370,7 +391,7 @@ export default function ProfilePage() {
             }}
             className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-violet-500/20 whitespace-nowrap"
           >
-            Complete Setup
+            {t('completeSetup')}
           </button>
         </div>
       )}
@@ -380,21 +401,66 @@ export default function ProfilePage() {
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-indigo-600/5 pointer-events-none" />
 
         {/* Avatar */}
-        <div className="relative flex-shrink-0">
-          {profileUser.photoUrl ? (
-            <Image
-              src={profileUser.photoUrl}
-              alt={profileUser.name}
-              width={96}
-              height={96}
-              className="w-24 h-24 rounded-2xl border-2 border-violet-500/30 shadow-lg object-cover"
-            />
-          ) : (
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg border-2 border-violet-500/30">
-              <span className="text-3xl font-extrabold text-white">{getUserInitials(profileUser.name)}</span>
+        <div className="relative flex-shrink-0 group">
+          <label className="cursor-pointer block relative">
+            {profileUser.photoUrl ? (
+              <Image
+                src={profileUser.photoUrl}
+                alt={profileUser.name}
+                width={96}
+                height={96}
+                className="w-24 h-24 rounded-2xl border-2 border-violet-500/30 shadow-lg object-cover group-hover:border-violet-500 transition-colors"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg border-2 border-violet-500/30 group-hover:border-violet-500 transition-colors">
+                <span className="text-3xl font-extrabold text-white">{getUserInitials(profileUser.name)}</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="w-6 h-6 text-white" />
             </div>
-          )}
-          <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full bg-zinc-900 border border-violet-500/30 text-[10px] font-bold text-violet-400 uppercase">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = async () => {
+                    const base64 = reader.result as string;
+                    try {
+                      const token = await getAuthToken();
+                      await fetch(`/api/users/${profileUser.id}`, {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                          name: profileUser.name,
+                          email: profileUser.email,
+                          dob: profileUser.dob || '',
+                          gender: profileUser.gender || '',
+                          address: profileUser.address || '',
+                          town: profileUser.town || '',
+                          state: profileUser.state || '',
+                          district: profileUser.district || '',
+                          phone: profileUser.phone || '',
+                          photoUrl: base64,
+                        })
+                      });
+                      window.location.reload();
+                    } catch (err) {
+                      console.error('Error uploading photo:', err);
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+          </label>
+          <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full bg-zinc-900 border border-violet-500/30 text-[10px] font-bold text-violet-400 uppercase pointer-events-none">
             {profileUser.role}
           </div>
         </div>
@@ -414,25 +480,34 @@ export default function ProfilePage() {
               <Edit className="w-3.5 h-3.5" />
             </button>
           </div>
+          
           <p className="text-sm text-gray-400">{profileUser.email}</p>
-          {profileUser.wardId && (
+          
+          {profileUser.phone && (
+            <p className="text-xs text-gray-400 font-mono">Contact: {profileUser.phone}</p>
+          )}
+
+          {profileUser.town && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
               <MapPin className="w-3.5 h-3.5 text-violet-400" />
-              <span>{profileUser.wardId.replace('_', ' ').toUpperCase()}</span>
+              <span>Locality/Ward: {profileUser.town} ({profileUser.district}, {profileUser.state})</span>
             </div>
           )}
+
           {profileUser.address && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
               <MapPin className="w-3.5 h-3.5 text-violet-400" />
               <span>Address: {profileUser.address}</span>
             </div>
           )}
+
           {profileUser.dob && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
               <Calendar className="w-3.5 h-3.5 text-violet-400" />
               <span>DOB: {new Date(profileUser.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} ({profileUser.age} yrs, {profileUser.gender})</span>
             </div>
           )}
+
           <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
             <Clock className="w-3.5 h-3.5 text-violet-400" />
             <span>Member since {new Date(profileUser.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' })}</span>
@@ -452,10 +527,10 @@ export default function ProfilePage() {
       {/* ── Stats Row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Reported', value: profileUser.issuesReported, icon: <Camera className="w-5 h-5" />, color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
-          { label: 'Validated', value: profileUser.issuesValidated, icon: <CheckCircle className="w-5 h-5" />, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-          { label: 'Resolved', value: resolvedCount, icon: <ShieldCheck className="w-5 h-5" />, color: 'text-sky-400', bg: 'bg-sky-500/10 border-sky-500/20' },
-          { label: 'Open', value: openCount, icon: <AlertTriangle className="w-5 h-5" />, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+          { label: t('reported'), value: profileUser.issuesReported, icon: <Camera className="w-5 h-5" />, color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
+          { label: t('validated'), value: profileUser.issuesValidated, icon: <CheckCircle className="w-5 h-5" />, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+          { label: t('resolved'), value: resolvedCount, icon: <ShieldCheck className="w-5 h-5" />, color: 'text-sky-400', bg: 'bg-sky-500/10 border-sky-500/20' },
+          { label: t('open'), value: openCount, icon: <AlertTriangle className="w-5 h-5" />, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
         ].map((stat) => (
           <div key={stat.label} className={cn('glass-card p-4 flex flex-col items-center gap-2 border', stat.bg)}>
             <div className={stat.color}>{stat.icon}</div>
@@ -479,9 +554,9 @@ export default function ProfilePage() {
             )}
           >
             {tab === 'reports' ? (
-              <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> My Reports</span>
+              <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> {t('myReports')}</span>
             ) : (
-              <span className="flex items-center gap-2"><Medal className="w-4 h-4" /> Badges</span>
+              <span className="flex items-center gap-2"><Medal className="w-4 h-4" /> {t('badges')}</span>
             )}
           </button>
         ))}
@@ -495,8 +570,8 @@ export default function ProfilePage() {
               <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
                 <Camera className="w-8 h-8 text-violet-400" />
               </div>
-              <p className="text-white font-bold">No reports yet</p>
-              <p className="text-sm text-gray-400">Start contributing by reporting a civic issue in your area.</p>
+              <p className="text-white font-bold">{t('noReports')}</p>
+              <p className="text-sm text-gray-400">{t('noReportsSub')}</p>
               <Link
                 href="/report"
                 className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl text-white text-sm font-bold hover:opacity-90 transition-opacity"
@@ -549,7 +624,7 @@ export default function ProfilePage() {
               href="/track"
               className="text-center text-sm font-semibold text-violet-400 hover:text-violet-300 py-2 transition-colors"
             >
-              Track all issues →
+              {t('trackAll')}
             </Link>
           )}
         </div>
@@ -563,8 +638,8 @@ export default function ProfilePage() {
               <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
                 <Trophy className="w-8 h-8 text-amber-400" />
               </div>
-              <p className="text-white font-bold">No badges yet</p>
-              <p className="text-sm text-gray-400">Report and validate issues to earn badges and climb the leaderboard.</p>
+              <p className="text-white font-bold">{t('noBadges')}</p>
+              <p className="text-sm text-gray-400">{t('noBadgesSub')}</p>
               <Link
                 href="/leaderboard"
                 className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 rounded-xl text-white text-sm font-bold hover:bg-zinc-700 transition-colors border border-white/10"
@@ -599,7 +674,7 @@ export default function ProfilePage() {
 
           {/* Locked badges preview */}
           <div className="mt-2">
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Badges to Unlock</p>
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">{t('badgesToUnlock')}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { id: 'validator_pro', name: 'Validator Pro', hint: 'Validate 25+ issues' },
@@ -637,8 +712,8 @@ export default function ProfilePage() {
 
             {/* Header */}
             <div>
-              <h3 className="text-xl font-extrabold text-white">Setup Your Profile</h3>
-              <p className="text-xs text-gray-400 mt-1">This will select your avatar based on age and gender.</p>
+              <h3 className="text-xl font-extrabold text-white">{t('setupProfile')}</h3>
+              <p className="text-xs text-gray-400 mt-1">{t('setupProfileSub')}</p>
             </div>
 
             {/* Progress bar */}
@@ -672,20 +747,30 @@ export default function ProfilePage() {
 
               {currentStep === 2 && (
                 <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your age?</label>
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Email Address</label>
                   <input
-                    type="number"
-                    value={formAge}
-                    onChange={(e) => setFormAge(e.target.value)}
+                    type="email"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
-                    placeholder="Enter your age"
-                    min="1"
-                    max="120"
+                    placeholder="Enter your email"
                   />
                 </div>
               )}
 
               {currentStep === 3 && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Date of Birth (DOB)</label>
+                  <input
+                    type="date"
+                    value={formDob}
+                    onChange={(e) => setFormDob(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                  />
+                </div>
+              )}
+
+              {currentStep === 4 && (
                 <div className="flex flex-col gap-3">
                   <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Select your gender</label>
                   <div className="grid grid-cols-3 gap-3">
@@ -708,66 +793,63 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {currentStep === 4 && (
-                <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Date of Birth (DOB)</label>
-                  <input
-                    type="date"
-                    value={formDob}
-                    onChange={handleDobChange}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
-                  />
-                </div>
-              )}
-
               {currentStep === 5 && (
                 <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Email Address</label>
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Residential Address</label>
                   <input
-                    type="email"
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
+                    type="text"
+                    value={formAddress}
+                    onChange={(e) => setFormAddress(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
-                    placeholder="Enter your email"
+                    placeholder="Enter your residential address"
                   />
                 </div>
               )}
 
               {currentStep === 6 && (
                 <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your town/village/city?</label>
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Which ward, village or locality?</label>
                   <input
                     type="text"
                     value={formTown}
                     onChange={(e) => setFormTown(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
-                    placeholder="e.g. New Delhi"
+                    placeholder="e.g. Ward 12 or Rampur Village"
                   />
                 </div>
               )}
 
               {currentStep === 7 && (
                 <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your state?</label>
-                  <input
-                    type="text"
-                    value={formStateVal}
-                    onChange={(e) => setFormStateVal(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
-                    placeholder="e.g. Delhi"
-                  />
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">State & District</label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={formStateVal}
+                      onChange={(e) => setFormStateVal(e.target.value)}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                      placeholder="State (e.g. Delhi)"
+                    />
+                    <input
+                      type="text"
+                      value={formDistrict}
+                      onChange={(e) => setFormDistrict(e.target.value)}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                      placeholder="District (e.g. Central Delhi)"
+                    />
+                  </div>
                 </div>
               )}
 
               {currentStep === 8 && (
                 <div className="flex flex-col gap-3">
-                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">What is your Districts?</label>
+                  <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Contact Number</label>
                   <input
-                    type="text"
-                    value={formDistrict}
-                    onChange={(e) => setFormDistrict(e.target.value)}
+                    type="tel"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500 transition-colors text-sm"
-                    placeholder="e.g. Central Delhi"
+                    placeholder="Enter your contact number"
                   />
                 </div>
               )}

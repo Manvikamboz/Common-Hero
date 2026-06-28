@@ -9,13 +9,15 @@ import {
   Camera, MapPin, Loader2, Cpu, AlertTriangle, CheckCircle,
   ArrowRight, ArrowLeft, Send, X
 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
-const STEP_LABELS = ['Media', 'Location', 'Details', 'Confirm'];
+const STEP_LABELS_KEYS = ['stepMedia', 'stepLocation', 'stepDetails', 'stepConfirm'];
 
 export default function ReportPage() {
   const router = useRouter();
   const { user, getAuthToken } = useAuth();
   const { location, error: locError, loading: locLoading, requestLocation } = useLocation();
+  const { t } = useLanguage();
 
   const [step, setStep] = useState(0);
   const [useFallbackMap, setUseFallbackMap] = useState(false);
@@ -331,8 +333,13 @@ export default function ReportPage() {
     setErrorMsg(null);
 
     try {
-      const compressed = await compressAndProcessImage(imageFile);
-      const compressedFile = new File([compressed], 'report.webp', { type: 'image/webp' });
+      let mediaFileToUpload: File;
+      if (imageFile.type.startsWith('video/')) {
+        mediaFileToUpload = imageFile;
+      } else {
+        const compressed = await compressAndProcessImage(imageFile);
+        mediaFileToUpload = new File([compressed], 'report.webp', { type: 'image/webp' });
+      }
 
       const fd = new FormData();
       fd.append('title', title);
@@ -343,7 +350,7 @@ export default function ReportPage() {
       fd.append('reportedBy', user?.id || 'anonymous');
       fd.append('overrideCategory', overrideCategory);
       fd.append('overrideSeverity', overrideSeverity);
-      fd.append('image', compressedFile);
+      fd.append('image', mediaFileToUpload);
       if (force === true) {
         fd.append('duplicateOverride', 'true');
       }
@@ -387,20 +394,20 @@ export default function ReportPage() {
           <CheckCircle className="w-10 h-10 text-emerald-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-extrabold text-white">Report Filed!</h1>
+          <h1 className="text-2xl font-extrabold text-white">{t('reportFiled')}</h1>
           <p className="text-gray-400 text-sm mt-2">
-            Your issue has been submitted and the community can now validate it.
+            {t('reportFiledSub')}
           </p>
           {trackingId && (
             <div className="mt-3 px-4 py-2 bg-zinc-900 border border-white/10 rounded-xl">
-              <span className="text-xs text-gray-500">Tracking ID: </span>
+              <span className="text-xs text-gray-500">{t('trackingId')}: </span>
               <span className="text-xs font-mono text-violet-400 font-bold">{trackingId.slice(0, 12).toUpperCase()}</span>
             </div>
           )}
         </div>
         <div className="glass-card p-4 w-full border-amber-500/20">
-          <p className="text-amber-400 font-bold text-sm">★ +10 Points Awarded</p>
-          <p className="text-xs text-gray-400 mt-1">You earned 10 points for civic contribution!</p>
+          <p className="text-amber-400 font-bold text-sm">{t('pointsAwarded')}</p>
+          <p className="text-xs text-gray-400 mt-1">{t('pointsAwardedSub')}</p>
         </div>
         {duplicateInfo && (
           <div className="glass-card p-4 w-full border-yellow-500/20 bg-yellow-950/10">
@@ -415,10 +422,10 @@ export default function ReportPage() {
         )}
         <div className="flex gap-3 w-full">
           <button onClick={() => router.push('/map')} className="flex-1 py-3 rounded-xl border border-white/10 text-sm font-bold text-gray-300 hover:text-white hover:bg-white/5 transition-colors">
-            View Map
+            {t('viewMap')}
           </button>
           <button onClick={() => { setSubmitSuccess(false); setStep(0); setImageFile(null); setImagePreview(null); setAiPreview(null); setTitle(''); setDescription(''); }} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-bold text-white hover:opacity-90 transition-opacity">
-            Report Another
+            {t('reportAnother')}
           </button>
         </div>
       </div>
@@ -429,13 +436,13 @@ export default function ReportPage() {
     <div className="max-w-xl mx-auto flex flex-col gap-6 py-4">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">Report Civic Issue</h1>
-        <p className="text-sm text-gray-400 mt-1">Gemini Vision will auto-categorize your report.</p>
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">{t('reportPageTitle')}</h1>
+        <p className="text-sm text-gray-400 mt-1">{t('reportPageSub')}</p>
       </div>
 
       {/* Step Progress */}
       <div className="flex items-center gap-0">
-        {STEP_LABELS.map((label, i) => (
+        {STEP_LABELS_KEYS.map((key, i) => (
           <React.Fragment key={i}>
             <div className="flex flex-col items-center gap-1">
               <div className={cn(
@@ -447,10 +454,10 @@ export default function ReportPage() {
                 {i < step ? '✓' : i + 1}
               </div>
               <span className={cn('text-[10px] font-semibold', i === step ? 'text-violet-400' : 'text-gray-500')}>
-                {label}
+                {t(key)}
               </span>
             </div>
-            {i < STEP_LABELS.length - 1 && (
+            {i < STEP_LABELS_KEYS.length - 1 && (
               <div className={cn('flex-1 h-0.5 mx-2 mb-5 transition-all', i < step ? 'bg-violet-600' : 'bg-white/5')} />
             )}
           </React.Fragment>
@@ -468,8 +475,8 @@ export default function ReportPage() {
       {step === 0 && (
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-bold text-white">Upload Incident Photo</h2>
-            <p className="text-xs text-gray-400">Gemini Vision will instantly analyze and categorize your image.</p>
+            <h2 className="text-lg font-bold text-white">{t('uploadPhoto')}</h2>
+            <p className="text-xs text-gray-400">{t('uploadPhotoSub')}</p>
           </div>
 
           {!imagePreview ? (
@@ -477,22 +484,26 @@ export default function ReportPage() {
               <div className="w-16 h-16 rounded-2xl bg-violet-600/15 border border-violet-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Camera className="w-8 h-8 text-violet-400" />
               </div>
-              <span className="text-sm font-bold text-gray-300">Capture Photo or Choose File</span>
-              <span className="text-xs text-gray-500 mt-1">Auto-compressed to WebP ({'<'}500KB)</span>
-              <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
+              <span className="text-sm font-bold text-gray-300">{t('capturePhoto')}</span>
+              <span className="text-xs text-gray-500 mt-1">Images up to 10MB, Videos up to 50MB</span>
+              <input type="file" accept="image/*,video/*" onChange={handleImageChange} className="hidden" />
             </label>
           ) : (
             <div className="relative rounded-2xl overflow-hidden aspect-video border border-white/10 bg-zinc-900">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+              {imageFile?.type.startsWith('video/') ? (
+                <video src={imagePreview} controls className="w-full h-full object-cover" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+              )}
               <button
                 onClick={() => { setImageFile(null); setImagePreview(null); setAiPreview(null); }}
-                className="absolute top-3 right-3 bg-black/70 hover:bg-black/90 p-1.5 rounded-lg text-white"
+                className="absolute top-3 right-3 bg-black/70 hover:bg-black/90 p-1.5 rounded-lg text-white z-10"
               >
                 <X className="w-4 h-4" />
               </button>
               {aiLoading && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm z-10">
                   <div className="flex items-center gap-2 bg-violet-950/80 px-4 py-2 rounded-full text-violet-300 text-sm font-bold">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Gemini Vision scanning...
@@ -539,15 +550,15 @@ export default function ReportPage() {
       {step === 1 && (
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-bold text-white">Pin the Location</h2>
-            <p className="text-xs text-gray-400">Drag the marker to exact location or use GPS.</p>
+            <h2 className="text-lg font-bold text-white">{t('pinLocation')}</h2>
+            <p className="text-xs text-gray-400">{t('pinLocationSub')}</p>
           </div>
 
           <div className="glass-card p-4 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-violet-400" />
-                <span className="text-sm font-bold text-white">GPS Coordinates</span>
+                <span className="text-sm font-bold text-white">{t('gpsCoords')}</span>
               </div>
               <button
                 onClick={requestLocation}
@@ -555,7 +566,7 @@ export default function ReportPage() {
                 className="text-xs font-bold text-violet-400 hover:text-violet-300 disabled:opacity-50 flex items-center gap-1"
               >
                 {locLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                Use Current Location
+                {t('useCurrentLocation')}
               </button>
             </div>
 
@@ -595,13 +606,13 @@ export default function ReportPage() {
       {step === 2 && (
         <div className="flex flex-col gap-5">
           <div>
-            <h2 className="text-lg font-bold text-white">Describe the Issue</h2>
-            <p className="text-xs text-gray-400 mt-1">Review AI suggestions and add context.</p>
+            <h2 className="text-lg font-bold text-white">{t('describeIssue')}</h2>
+            <p className="text-xs text-gray-400 mt-1">{t('describeIssueSub')}</p>
           </div>
 
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Title</label>
+              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">{t('fieldTitle')}</label>
               <input
                 type="text"
                 value={title}
@@ -612,7 +623,7 @@ export default function ReportPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Description</label>
+              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">{t('fieldDescription')}</label>
               <textarea
                 rows={4}
                 value={description}
@@ -624,7 +635,7 @@ export default function ReportPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Category</label>
+                <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">{t('fieldCategory')}</label>
                 <select
                   value={overrideCategory}
                   onChange={(e) => setOverrideCategory(e.target.value)}
@@ -636,7 +647,7 @@ export default function ReportPage() {
                 </select>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Severity</label>
+                <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">{t('fieldSeverity')}</label>
                 <select
                   value={overrideSeverity}
                   onChange={(e) => setOverrideSeverity(e.target.value)}
@@ -656,8 +667,8 @@ export default function ReportPage() {
       {step === 3 && (
         <div className="flex flex-col gap-5">
           <div>
-            <h2 className="text-lg font-bold text-white">Review & Submit</h2>
-            <p className="text-xs text-gray-400 mt-1">Confirm your report details before filing.</p>
+            <h2 className="text-lg font-bold text-white">{t('reviewSubmit')}</h2>
+            <p className="text-xs text-gray-400 mt-1">{t('reviewSubmitSub')}</p>
           </div>
 
           <div className="glass-card p-5 flex flex-col gap-4 border-violet-500/15">
@@ -710,17 +721,17 @@ export default function ReportPage() {
             className="flex items-center gap-2 px-4 py-3 rounded-xl border border-white/10 text-sm font-bold text-gray-300 hover:text-white hover:bg-white/5 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            {t('back')}
           </button>
         )}
 
-        {step < STEP_LABELS.length - 1 ? (
+        {step < STEP_LABELS_KEYS.length - 1 ? (
           <button
             onClick={() => setStep((s) => s + 1)}
             disabled={!canProceed()}
             className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl shadow-lg shadow-violet-500/20 transition-all"
           >
-            Continue
+            {t('continue')}
             <ArrowRight className="w-4 h-4" />
           </button>
         ) : duplicateWarningInfo ? (
@@ -729,7 +740,7 @@ export default function ReportPage() {
               onClick={() => router.push(`/issues/${duplicateWarningInfo.id}`)}
               className="flex-1 py-3 rounded-xl border border-yellow-500/20 hover:border-yellow-500/40 text-sm font-bold text-yellow-400 hover:bg-yellow-500/5 transition-all"
             >
-              View Existing
+              {t('viewExisting')}
             </button>
             <button
               onClick={() => handleSubmit(true)}
@@ -737,7 +748,7 @@ export default function ReportPage() {
               className="flex-1 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-bold text-white transition-colors flex items-center justify-center gap-2"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Force Submit
+              {t('forceSubmit')}
             </button>
           </div>
         ) : (
