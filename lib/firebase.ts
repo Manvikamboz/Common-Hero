@@ -22,6 +22,7 @@ export const storage = getStorage(app);
 
 if (typeof window !== 'undefined') {
   // Set the App Check debug token only if explicitly provided or in development mode
+  const isDebug = !!(process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN || process.env.NODE_ENV === 'development');
   if (process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN) {
     (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
     (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
@@ -29,14 +30,22 @@ if (typeof window !== 'undefined') {
     (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = true;
   }
 
-  try {
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6Lcw-popAAAAAF1139487192837';
-    initializeAppCheck(app, {
-      provider: new ReCaptchaEnterpriseProvider(siteKey),
-      isTokenAutoRefreshEnabled: true
-    });
-  } catch (err) {
-    console.error("App Check failed to initialize:", err);
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  const hasRealSiteKey = siteKey && siteKey !== '6Lcw-popAAAAAF1139487192837';
+
+  if (hasRealSiteKey || isDebug) {
+    try {
+      const activeSiteKey = siteKey || '6Lcw-popAAAAAF1139487192837';
+      initializeAppCheck(app, {
+        provider: new ReCaptchaEnterpriseProvider(activeSiteKey),
+        isTokenAutoRefreshEnabled: true
+      });
+      console.log("App Check initialized successfully.");
+    } catch (err) {
+      console.error("App Check failed to initialize:", err);
+    }
+  } else {
+    console.warn("App Check skipped: No valid NEXT_PUBLIC_RECAPTCHA_SITE_KEY found in production.");
   }
 }
 
