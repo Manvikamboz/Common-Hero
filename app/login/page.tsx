@@ -4,18 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { LogIn, KeyRound, Sparkles, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
+import { LogIn, KeyRound, Sparkles, AlertCircle, CheckCircle2, Mail, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, signInWithGoogle, signInWithDemo } = useAuth();
+  const { user, loading: authLoading, signInWithGoogle, signInWithDemo, signInWithEmail, signUpWithEmail } = useAuth();
   const { t } = useLanguage();
   
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [generatedEmailOtp, setGeneratedEmailOtp] = useState('');
-  const [step, setStep] = useState<'input' | 'otp'>('input');
+  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,7 +38,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -51,52 +50,37 @@ export default function LoginPage() {
       return;
     }
 
-    try {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedEmailOtp(code);
-      console.log(`[DEMO MODE] Verification OTP for ${email}: ${code}`);
-      setStep('otp');
-      setSuccess(`[DEMO MODE] Verification code sent! Check your inbox or enter: ${code}`);
-    } catch (err: any) {
-      setError('Failed to send email verification code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setLoading(true);
-
-    if (!otp || otp.length < 6) {
-      setError('Please enter the 6-digit verification code.');
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters long.');
       setLoading(false);
       return;
     }
 
-    if (otp === generatedEmailOtp || otp === '123456') {
-      let role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen';
-      if (email === 'admin@commonhero.app') {
-        role = 'admin';
-      } else if (email === 'jane@commonhero.app') {
-        role = 'validator';
-      } else if (email.endsWith('.gov') || email.includes('@municipal.gov')) {
-        role = 'authority';
-      }
-
-      try {
-        await signInWithDemo(role, email);
+    try {
+      if (mode === 'login') {
+        await signInWithEmail(email, password);
         setSuccess('Logged in successfully!');
-        router.push('/');
-      } catch (err: any) {
-        setError(err.message || 'Email authentication failed.');
-      } finally {
-        setLoading(false);
+      } else {
+        await signUpWithEmail(email, password);
+        setSuccess('Account created successfully! Logging you in...');
       }
-    } else {
-      setError('Invalid or expired verification code.');
+      router.push('/');
+    } catch (err: any) {
+      console.error('Email authentication error:', err);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Incorrect email or password. Please try again.');
+      } else if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email. Try signing up.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('An account already exists with this email address.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters long.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('The email address is badly formatted.');
+      } else {
+        setError(err.message || 'Authentication failed. Please try again.');
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -148,9 +132,13 @@ export default function LoginPage() {
             height={48}
             className="w-12 h-12 object-contain rounded-xl"
           />
-          <h2 className="text-2xl font-bold tracking-tight text-white">{t('loginWelcome')}</h2>
-          <p className="text-xs text-gray-200 max-w-xs">
-            {t('loginSub')}
+          <h2 className="text-2xl font-bold tracking-tight text-white">
+            {mode === 'login' ? t('loginWelcome') : 'Create Account'}
+          </h2>
+          <p className="text-xs text-gray-400 max-w-xs">
+            {mode === 'login' 
+              ? 'Sign in to report and track civic issues in your neighborhood.' 
+              : 'Sign up to start reporting issues and earning community points.'}
           </p>
         </div>
 
@@ -168,88 +156,76 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Forms */}
-        {step === 'input' ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-semibold text-gray-100">
-                {t('loginEmailLabel')}
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-colors"
-                  required
-                />
-              </div>
-              <p className="text-[10px] text-gray-300">
-                Enter your email address to receive a 6-digit login OTP code.
-              </p>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-xs font-semibold text-gray-200">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-colors"
+                required
+              />
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm transition-colors shadow-lg shadow-violet-600/20"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" />
-                  {t('sendOtp')}
-                </>
-              )}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="otp" className="text-xs font-semibold text-gray-100">
-                {t('otpLabel')}
-              </label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  id="otp"
-                  type="text"
-                  maxLength={6}
-                  placeholder="123456"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 tracking-[0.3em] font-mono text-center focus:outline-none focus:border-violet-500 transition-colors"
-                  required
-                />
-              </div>
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-xs font-semibold text-gray-200">
+              Password
+            </label>
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-colors"
+                required
+              />
             </div>
+          </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setStep('input')}
-                className="flex-1 py-2.5 bg-zinc-950 border border-white/10 text-gray-300 hover:text-white rounded-lg text-sm transition-colors"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-[2] flex items-center justify-center gap-2 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm transition-colors shadow-lg shadow-violet-600/20"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                ) : (
-                  t('verifyCode')
-                )}
-              </button>
-            </div>
-          </form>
-        )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm transition-colors shadow-lg shadow-violet-600/20"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                {mode === 'login' ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                {mode === 'login' ? 'Sign In' : 'Sign Up'}
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Toggle Mode */}
+        <div className="text-center mt-4">
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === 'login' ? 'register' : 'login');
+              setError(null);
+              setSuccess(null);
+            }}
+            className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+          >
+            {mode === 'login' 
+              ? "Don't have an account? Sign Up" 
+              : 'Already have an account? Sign In'}
+          </button>
+        </div>
 
         {/* Separator */}
         <div className="relative my-6">
@@ -261,7 +237,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Third-party / Demo sign-in options */}
+        {/* Google sign-in option */}
         <div className="space-y-3">
           <button
             onClick={handleGoogleSignIn}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/types';
@@ -205,6 +205,25 @@ export function useAuth() {
       await signInWithPopup(auth, provider);
     } catch (err) {
       console.error('Google Sign-In failed:', err);
+      throw err;
+    }
+  }, []);
+
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      console.error('Email Sign-In failed:', err);
+      throw err;
+    }
+  }, []);
+
+  const signUpWithEmail = useCallback(async (email: string, password: string) => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      console.error('Email Sign-Up failed:', err);
+      throw err;
     }
   }, []);
 
@@ -237,5 +256,5 @@ export function useAuth() {
     }
   }, []);
 
-  return { user, loading, signInWithGoogle, signInWithDemo, logout, getAuthToken };
+  return { user, loading, signInWithGoogle, signInWithDemo, signInWithEmail, signUpWithEmail, logout, getAuthToken };
 }
