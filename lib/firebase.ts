@@ -21,23 +21,13 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 if (typeof window !== 'undefined') {
-  // Set the App Check debug token only if explicitly provided or in development mode
-  const isDebug = !!(process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN || process.env.NODE_ENV === 'development');
-  if (process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN) {
-    (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
-    (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
-  } else if (process.env.NODE_ENV === 'development') {
-    (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = true;
-  }
-
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   const hasRealSiteKey = siteKey && siteKey !== '6Lcw-popAAAAAF1139487192837';
 
-  if (hasRealSiteKey || isDebug) {
+  if (hasRealSiteKey) {
     try {
-      const activeSiteKey = siteKey || '6Lcw-popAAAAAF1139487192837';
       initializeAppCheck(app, {
-        provider: new ReCaptchaEnterpriseProvider(activeSiteKey),
+        provider: new ReCaptchaEnterpriseProvider(siteKey),
         isTokenAutoRefreshEnabled: true
       });
       console.log("App Check initialized successfully.");
@@ -45,7 +35,7 @@ if (typeof window !== 'undefined') {
       console.error("App Check failed to initialize:", err);
     }
   } else {
-    console.warn("App Check skipped: No valid NEXT_PUBLIC_RECAPTCHA_SITE_KEY found in production.");
+    console.warn("App Check skipped: No valid NEXT_PUBLIC_RECAPTCHA_SITE_KEY configured.");
   }
 }
 
