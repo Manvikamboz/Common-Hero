@@ -21,13 +21,18 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 if (typeof window !== 'undefined') {
-  // Set the App Check debug token (plural is required by Firebase Web SDK, but we support both for compatibility)
-  (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN || true;
-  (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
+  // Set the App Check debug token only if explicitly provided or in development mode
+  if (process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN) {
+    (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
+    (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
+  } else if (process.env.NODE_ENV === 'development') {
+    (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = true;
+  }
 
   try {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6Lcw-popAAAAAF1139487192837';
     initializeAppCheck(app, {
-      provider: new ReCaptchaEnterpriseProvider('6Lcw-popAAAAAF1139487192837'),
+      provider: new ReCaptchaEnterpriseProvider(siteKey),
       isTokenAutoRefreshEnabled: true
     });
   } catch (err) {
