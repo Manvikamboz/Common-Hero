@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   Trophy, Star, ShieldCheck, Camera, MapPin, Clock, CheckCircle,
   AlertTriangle, Loader2, ArrowRight, Medal, Flame, TrendingUp,
-  FileText, BarChart3, User, Edit, Sparkles, X, ChevronRight, ChevronLeft, UserCheck, Calendar, Mail
+  FileText, BarChart3, User, Edit, Sparkles, X, ChevronRight, ChevronLeft, UserCheck, Calendar, Mail, LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
@@ -132,12 +132,17 @@ function getAvatarPath(age: number, gender: string): string {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, loading: authLoading, getAuthToken } = useAuth();
+  const { user, loading: authLoading, getAuthToken, logout } = useAuth();
   const { t } = useLanguage();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'reports' | 'badges'>('reports');
+
+  const handleLogoutClick = async () => {
+    await logout();
+    router.push('/login');
+  };
 
   // Onboarding / Edit Profile states
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -511,6 +516,16 @@ export default function ProfilePage() {
           <div className="flex items-center gap-1.5 text-xs text-gray-500 justify-center sm:justify-start">
             <Clock className="w-3.5 h-3.5 text-violet-400" />
             <span>Member since {new Date(profileUser.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' })}</span>
+          </div>
+
+          <div className="pt-2 flex justify-center sm:justify-start">
+            <button
+              onClick={handleLogoutClick}
+              className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-lg transition-colors border border-rose-500/20"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </button>
           </div>
         </div>
 
