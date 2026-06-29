@@ -31,7 +31,7 @@ export async function GET(
       }
     }
 
-    const { adminDb } = await getAdminServices();
+    const { adminDb, adminAuth } = await getAdminServices();
 
     // 1. Fetch the user document
     const userDoc = await adminDb.collection('users').doc(targetId).get();
@@ -139,7 +139,41 @@ export async function GET(
         await adminDb.collection('users').doc(targetId).set(demoProfile);
         userData = { id: targetId, ...demoProfile };
       } else {
-        return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+        // Real user whose Firestore document doesn't exist yet (e.g. first login via Google/Email)
+        let displayName = 'Anonymous User';
+        let email = authUser.email || '';
+        try {
+          const firebaseUserRecord = await adminAuth.getUser(targetId);
+          displayName = firebaseUserRecord.displayName || firebaseUserRecord.email?.split('@')[0] || 'Anonymous User';
+          email = firebaseUserRecord.email || email;
+        } catch (authErr) {
+          console.error('Error fetching user record from auth:', authErr);
+        }
+
+        const defaultProfile = {
+          name: displayName,
+          email: email,
+          role: authUser.role || 'citizen',
+          points: 0,
+          issuesReported: 0,
+          issuesValidated: 0,
+          badges: [],
+          createdAt: new Date().toISOString(),
+          address: '',
+          latitude: 0,
+          longitude: 0,
+          town: '',
+          state: '',
+          district: '',
+        };
+
+        try {
+          await adminDb.collection('users').doc(targetId).set(defaultProfile);
+        } catch (dbErr) {
+          console.error('Error auto-creating Firestore user doc:', dbErr);
+        }
+
+        userData = { id: targetId, ...defaultProfile };
       }
     } else {
       userData = { id: userDoc.id, ...userDoc.data() };
