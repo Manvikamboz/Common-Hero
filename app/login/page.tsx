@@ -1,45 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/lib/firebase';
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { ShieldCheck, LogIn, Phone, KeyRound, Sparkles, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { LogIn, KeyRound, Sparkles, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-
-declare global {
-  interface Window {
-    recaptchaVerifier: RecaptchaVerifier | undefined;
-  }
-}
 
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading, signInWithGoogle, signInWithDemo } = useAuth();
   const { t } = useLanguage();
   
-  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
   const [otp, setOtp] = useState('');
   const [generatedEmailOtp, setGeneratedEmailOtp] = useState('');
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
-  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).FIREBASE_APPCHECK_DEBUG_TOKENS = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN || true;
-      (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN;
-    }
-  }, []);
 
   // Redirect to home if already logged in
   useEffect(() => {
@@ -47,20 +26,6 @@ export default function LoginPage() {
       router.push('/');
     }
   }, [user, authLoading, router]);
-
-  // Cleanup Recaptcha on unmount
-  useEffect(() => {
-    return () => {
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear();
-        } catch (e) {
-          console.error('Error clearing recaptcha on unmount:', e);
-        }
-        window.recaptchaVerifier = undefined;
-      }
-    };
-  }, []);
 
   const handleDemoSignIn = async (role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen') => {
     setError(null);
@@ -74,127 +39,26 @@ export default function LoginPage() {
     }
   };
 
-  // Setup Recaptcha
-  const setupRecaptcha = () => {
-    const container = document.getElementById('recaptcha-container');
-    if (!container) return;
-
-    if (window.recaptchaVerifier && container.hasChildNodes()) {
-      const globalWindow = window as any;
-      if (globalWindow.grecaptcha && globalWindow.recaptchaWidgetId !== undefined) {
-        try {
-          globalWindow.grecaptcha.reset(globalWindow.recaptchaWidgetId);
-        } catch (e) {
-          console.error('Error resetting recaptcha on reuse:', e);
-        }
-      }
-      return; // Reuse the existing verifier
-    }
-
-    try {
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear();
-        } catch (e) {
-          // Ignore clear error
-        }
-        window.recaptchaVerifier = undefined;
-      }
-      
-      container.innerHTML = '';
-
-      const verifier = new RecaptchaVerifier(
-        auth,
-        'recaptcha-container',
-        {
-          size: 'invisible',
-          callback: () => {
-            console.log('g-recaptcha-response solved');
-          },
-          'expired-callback': () => {
-            setError('reCAPTCHA expired. Please try again.');
-          }
-        }
-      );
-
-      verifier.render().then((widgetId) => {
-        (window as any).recaptchaWidgetId = widgetId;
-      }).catch((err) => {
-        console.error('Error rendering recaptcha:', err);
-      });
-
-      window.recaptchaVerifier = verifier;
-    } catch (err: any) {
-      console.error('Error initializing recaptcha:', err);
-      setError('Failed to initialize security verifier.');
-    }
-  };
-
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
     setLoading(true);
 
-    if (authMethod === 'email') {
-      if (!email || !email.includes('@')) {
-        setError('Please enter a valid email address.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedEmailOtp(code);
-        console.log(`[DEMO MODE] Verification OTP for ${email}: ${code}`);
-        setStep('otp');
-        setSuccess(`[DEMO MODE] Verification code sent! Check your inbox or enter: ${code}`);
-      } catch (err: any) {
-        setError('Failed to send email verification code.');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!phone || phone.length < 10) {
-      setError('Please enter a valid phone number (include country code, e.g. +919876543210).');
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address.');
       setLoading(false);
       return;
     }
 
     try {
-      setupRecaptcha();
-      const appVerifier = window.recaptchaVerifier;
-      if (!appVerifier) {
-        throw new Error('reCAPTCHA verifier not initialized.');
-      }
-      
-      const confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
-      confirmationResultRef.current = confirmationResult;
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedEmailOtp(code);
+      console.log(`[DEMO MODE] Verification OTP for ${email}: ${code}`);
       setStep('otp');
-      setSuccess('Verification code sent successfully!');
+      setSuccess(`[DEMO MODE] Verification code sent! Check your inbox or enter: ${code}`);
     } catch (err: any) {
-      console.error('Phone auth error:', err);
-      if (err.code === 'auth/configuration-not-found' || err.message?.includes('configuration-not-found')) {
-        setError('Firebase Phone Authentication is not enabled in your project console. Please enable the "Phone" provider under Authentication -> Sign-in method, or bypass using the demo button below.');
-      } else if (err.code === 'auth/operation-not-allowed' || err.message?.includes('operation-not-allowed')) {
-        setError('Phone sign-in is not allowed/enabled for this Firebase project. Please enable the "Phone" provider in the Firebase Console under Authentication -> Sign-in method.');
-      } else if (err.code === 'auth/internal-error' || err.message?.includes('internal-error')) {
-        setError('Firebase Authentication encountered an internal error. This is often due to reCAPTCHA loading issues. Please check your network and ensure your local development server is whitelisted.');
-      } else {
-        setError(err.message || 'Failed to send OTP code. Ensure correct country code prefix.');
-      }
-
-      // Reset the reCAPTCHA so the user can try again
-      const globalWindow = window as any;
-      if (globalWindow.grecaptcha && globalWindow.recaptchaWidgetId !== undefined) {
-        try {
-          globalWindow.grecaptcha.reset(globalWindow.recaptchaWidgetId);
-        } catch (e) {
-          console.error('Error resetting grecaptcha after failure:', e);
-        }
-      }
+      setError('Failed to send email verification code.');
     } finally {
       setLoading(false);
     }
@@ -212,44 +76,27 @@ export default function LoginPage() {
       return;
     }
 
-    if (authMethod === 'email') {
-      if (otp === generatedEmailOtp || otp === '123456') {
-        let role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen';
-        if (email === 'admin@commonhero.app') {
-          role = 'admin';
-        } else if (email === 'jane@commonhero.app') {
-          role = 'validator';
-        } else if (email.endsWith('.gov') || email.includes('@municipal.gov')) {
-          role = 'authority';
-        }
+    if (otp === generatedEmailOtp || otp === '123456') {
+      let role: 'citizen' | 'validator' | 'authority' | 'admin' = 'citizen';
+      if (email === 'admin@commonhero.app') {
+        role = 'admin';
+      } else if (email === 'jane@commonhero.app') {
+        role = 'validator';
+      } else if (email.endsWith('.gov') || email.includes('@municipal.gov')) {
+        role = 'authority';
+      }
 
-        try {
-          await signInWithDemo(role, email);
-          setSuccess('Logged in successfully!');
-          router.push('/');
-        } catch (err: any) {
-          setError(err.message || 'Email authentication failed.');
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setError('Invalid or expired verification code.');
+      try {
+        await signInWithDemo(role, email);
+        setSuccess('Logged in successfully!');
+        router.push('/');
+      } catch (err: any) {
+        setError(err.message || 'Email authentication failed.');
+      } finally {
         setLoading(false);
       }
-      return;
-    }
-
-    try {
-      if (!confirmationResultRef.current) {
-        throw new Error('No active verification session found. Please request a new code.');
-      }
-      await confirmationResultRef.current.confirm(otp);
-      setSuccess('Logged in successfully!');
-      router.push('/');
-    } catch (err: any) {
-      console.error('OTP confirmation error:', err);
-      setError(err.message || 'Invalid or expired OTP code.');
-    } finally {
+    } else {
+      setError('Invalid or expired verification code.');
       setLoading(false);
     }
   };
@@ -321,84 +168,29 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Tab Switcher */}
-        {step === 'input' && (
-          <div className="grid grid-cols-2 gap-2 bg-zinc-950 p-1 rounded-lg border border-white/5 mb-6">
-            <button
-              type="button"
-              onClick={() => setAuthMethod('phone')}
-              className={cn(
-                "flex items-center justify-center gap-2 py-2 rounded-md text-xs font-semibold transition-all",
-                authMethod === 'phone'
-                  ? "bg-violet-600 text-white shadow"
-                  : "text-gray-400 hover:text-white"
-              )}
-            >
-              <Phone className="w-3.5 h-3.5" />
-              {t('loginPhoneTab')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAuthMethod('email')}
-              className={cn(
-                "flex items-center justify-center gap-2 py-2 rounded-md text-xs font-semibold transition-all",
-                authMethod === 'email'
-                  ? "bg-violet-600 text-white shadow"
-                  : "text-gray-400 hover:text-white"
-              )}
-            >
-              <Mail className="w-3.5 h-3.5" />
-              {t('loginEmailTab')}
-            </button>
-          </div>
-        )}
-
         {/* Forms */}
         {step === 'input' ? (
           <form onSubmit={handleSendOtp} className="space-y-4">
-            {authMethod === 'phone' ? (
-              <div className="space-y-2">
-                <label htmlFor="phone" className="text-xs font-semibold text-gray-100">
-                  {t('loginPhoneLabel')}
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    id="phone"
-                    type="tel"
-                    placeholder="+919876543210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-colors"
-                    required
-                  />
-                </div>
-                <p className="text-[10px] text-gray-300">
-                  Format: International code prefix (+91 for India, +1 for US) followed by 10-digit number.
-                </p>
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-xs font-semibold text-gray-100">
+                {t('loginEmailLabel')}
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-colors"
+                  required
+                />
               </div>
-            ) : (
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-xs font-semibold text-gray-100">
-                  {t('loginEmailLabel')}
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-colors"
-                    required
-                  />
-                </div>
-                <p className="text-[10px] text-gray-300">
-                  Enter your email address to receive a 6-digit login OTP code.
-                </p>
-              </div>
-            )}
+              <p className="text-[10px] text-gray-300">
+                Enter your email address to receive a 6-digit login OTP code.
+              </p>
+            </div>
 
             <button
               type="submit"
@@ -469,7 +261,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Google sign-in option */}
+        {/* Third-party / Demo sign-in options */}
         <div className="space-y-3">
           <button
             onClick={handleGoogleSignIn}
@@ -506,9 +298,6 @@ export default function LoginPage() {
             {t('bypassDemo')}
           </button>
         </div>
-
-        {/* Invisible ReCAPTCHA Container */}
-        <div id="recaptcha-container" ref={recaptchaContainerRef} className="mt-4"></div>
 
       </div>
     </div>
